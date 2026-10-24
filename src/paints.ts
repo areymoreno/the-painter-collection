@@ -16,6 +16,17 @@ export type BrandId =
   | 'kimera'
   | 'turbodork'
   | 'p3'
+  | 'mig'
+  | 'akrc'
+  | 'foundry'
+  | 'coatdarms'
+  | 'warcolours'
+  | 'tamiya'
+  | 'mrhobby'
+  | 'humbrol'
+  | 'revell'
+  | 'italeri'
+  | 'mission'
 
 export type CitadelRange =
   | 'Base'

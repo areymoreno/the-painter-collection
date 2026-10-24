@@ -1,11 +1,11 @@
 import { type BrandId, type Paint, PAINTS, RANGE_INFO } from './paints'
 
-export type Container = 'pot' | 'dropper'
+/** Bote con tapa abatible, cuentagotas, tarro de cristal con rosca o lata metálica */
+export type Container = 'pot' | 'dropper' | 'jar' | 'tin'
 
 export interface Brand {
   id: BrandId
   name: string
-  /** Bote con tapa abatible o frasco cuentagotas */
   container: Container
   /** Color del plástico de la tapa (pot) o del tapón (dropper) */
   cap: string
@@ -115,6 +115,88 @@ export const BRANDS: Brand[] = [
     cap: '#f1f0ec',
     capStyle: 'stepped',
     load: fromJson('p3', () => import('./data/p3.json')),
+  },
+  {
+    id: 'mig',
+    name: 'AMMO by Mig',
+    container: 'dropper',
+    cap: '#f07a1e',
+    capStyle: 'stepped',
+    load: fromJson('mig', () => import('./data/mig.json')),
+  },
+  {
+    id: 'akrc',
+    name: 'AK Real Colors',
+    container: 'jar',
+    cap: '#151515',
+    load: fromJson('akrc', () => import('./data/akrc.json')),
+  },
+  {
+    id: 'foundry',
+    name: 'Foundry',
+    container: 'pot',
+    cap: '#1a1a1a',
+    load: fromJson('foundry', () => import('./data/foundry.json')),
+  },
+  {
+    id: 'coatdarms',
+    name: "Coat d'Arms",
+    container: 'pot',
+    cap: '#202020',
+    load: fromJson('coatdarms', () => import('./data/coatdarms.json')),
+  },
+  {
+    id: 'warcolours',
+    name: 'Warcolours',
+    container: 'dropper',
+    cap: '#3b2a22',
+    capStyle: 'stepped',
+    load: fromJson('warcolours', () => import('./data/warcolours.json')),
+  },
+  {
+    id: 'tamiya',
+    name: 'Tamiya',
+    container: 'jar',
+    cap: '#f2f2ef',
+    load: fromJson('tamiya', () => import('./data/tamiya.json')),
+  },
+  {
+    id: 'mrhobby',
+    name: 'Mr. Hobby',
+    container: 'jar',
+    cap: '#8e9196',
+    load: fromJson('mrhobby', () => import('./data/mrhobby.json')),
+  },
+  {
+    id: 'humbrol',
+    name: 'Humbrol',
+    container: 'dropper',
+    cap: '#f4f3ef',
+    capStyle: 'cone',
+    load: fromJson('humbrol', () => import('./data/humbrol.json')),
+  },
+  {
+    id: 'revell',
+    name: 'Revell',
+    container: 'tin',
+    cap: '#c9ccd0',
+    load: fromJson('revell', () => import('./data/revell.json')),
+  },
+  {
+    id: 'italeri',
+    name: 'Italeri',
+    container: 'dropper',
+    cap: '#f4f3ef',
+    capStyle: 'stepped',
+    load: fromJson('italeri', () => import('./data/italeri.json')),
+  },
+  {
+    id: 'mission',
+    name: 'Mission Models',
+    container: 'dropper',
+    cap: '#141414',
+    capStyle: 'flip',
+    load: fromJson('mission', () => import('./data/mission.json')),
   },
 ]
 

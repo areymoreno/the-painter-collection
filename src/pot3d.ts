@@ -206,7 +206,31 @@ Object.assign(DROPPERS, {
   p3: { r: 0.84, bodyH: 3.1, labelY: 0.25, labelH: 2.5, cap: STEPPED_CAP, ribH: 0.58 },
 } satisfies Partial<Record<DropperStyle, DropperShape>>)
 
+interface ScrewJar {
+  r: number
+  bodyH: number
+  neckR: number
+  labelY: number
+  labelH: number
+  capR: number
+  capH: number
+}
+
+const SCREW_JARS: Record<string, ScrewJar> = {
+  // Tamiya mini 10 ml: tarro bajo de cristal con tapón blanco
+  tamiya: { r: 0.8, bodyH: 1.75, neckR: 0.62, labelY: 0.2, labelH: 1.3, capR: 0.72, capH: 0.72 },
+  // Mr. Hobby 10 ml: tapón gris estriado
+  mrhobby: { r: 0.82, bodyH: 1.8, neckR: 0.64, labelY: 0.15, labelH: 1.45, capR: 0.75, capH: 0.62 },
+  // AK Real Colors 10 ml: frasco de cristal más alto con tapón negro
+  akrc: { r: 0.7, bodyH: 2.2, neckR: 0.48, labelY: 0.2, labelH: 1.8, capR: 0.56, capH: 0.75 },
+}
+
 const DROPPER_STYLE: Partial<Record<string, DropperStyle>> = {
+  mig: 'vallejo',
+  warcolours: 'generic',
+  humbrol: 'reaper',
+  italeri: 'reaper',
+  mission: 'kimera',
   scale75: 'scale75',
   reaper: 'reaper',
   greenstuffworld: 'greenstuffworld',
@@ -458,6 +482,115 @@ export class PotViewer {
     return neckY - 0.08 + d.cap[d.cap.length - 1][1]
   }
 
+  // ---------- Tarro de cristal con tapón de rosca (Tamiya, Mr. Hobby, AK Real Colors) ----------
+
+  private buildScrewJar(j: ScrewJar): number {
+    const body = new THREE.Mesh(
+      new THREE.LatheGeometry(
+        v2([
+          [0, 0],
+          ...arc(j.r - 0.08, 0.08, 0.08, -Math.PI / 2, 0, 5),
+          [j.r, j.bodyH],
+          ...arc(j.r - 0.16, j.bodyH, 0.16, 0, Math.PI / 2, 5),
+          [j.neckR, j.bodyH + 0.16],
+          [j.neckR, j.bodyH + 0.3],
+        ]),
+        96,
+      ),
+      this.paintMat,
+    )
+    this.pot.add(body)
+
+    const label = new THREE.Mesh(
+      new THREE.CylinderGeometry(j.r + 0.006, j.r + 0.006, j.labelH, 96, 1, true, -Math.PI, Math.PI * 2),
+      this.paperMat,
+    )
+    label.position.y = j.labelY + j.labelH / 2
+    this.pot.add(label)
+
+    // Tapón de rosca estriado
+    const capY = j.bodyH + 0.12
+    this.opener.position.y = capY
+    this.pot.add(this.opener)
+    const cap = new THREE.Mesh(
+      new THREE.LatheGeometry(
+        v2([
+          [j.capR - 0.02, 0],
+          [j.capR, 0.03],
+          [j.capR, j.capH - 0.05],
+          [j.capR - 0.05, j.capH],
+          [0, j.capH],
+        ]),
+        64,
+      ),
+      this.plasticMat,
+    )
+    this.opener.add(cap)
+    const n = 60
+    const ribs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.03, j.capH * 0.8, 0.04), this.plasticMat, n)
+    const m = new THREE.Matrix4()
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2
+      m.makeRotationY(-a).setPosition(Math.cos(a) * (j.capR + 0.005), j.capH * 0.45, Math.sin(a) * (j.capR + 0.005))
+      ribs.setMatrixAt(i, m)
+    }
+    this.opener.add(ribs)
+    return capY + j.capH
+  }
+
+  // ---------- Lata metálica (Revell Email Color) ----------
+
+  private buildTin(): number {
+    const R = 0.98
+    const H = 1.25
+    const metal = this.ferruleMat
+    metal.color.set('#c9ccd0')
+    const body = new THREE.Mesh(
+      new THREE.LatheGeometry(
+        v2([
+          [0, 0],
+          [R - 0.03, 0],
+          [R, 0.04],
+          [R, H - 0.04],
+          [R - 0.03, H],
+          [R - 0.08, H],
+        ]),
+        96,
+      ),
+      metal,
+    )
+    this.pot.add(body)
+    const label = new THREE.Mesh(
+      new THREE.CylinderGeometry(R + 0.006, R + 0.006, H - 0.2, 96, 1, true, -Math.PI, Math.PI * 2),
+      this.paperMat,
+    )
+    label.position.y = H / 2
+    this.pot.add(label)
+
+    // Tapa a presión con anillos
+    this.opener.position.y = H
+    this.pot.add(this.opener)
+    const lid = new THREE.Mesh(
+      new THREE.LatheGeometry(
+        v2([
+          [R - 0.06, 0],
+          [R + 0.01, 0.02],
+          [R + 0.01, 0.1],
+          [R - 0.04, 0.14],
+          [R - 0.12, 0.12],
+          [R - 0.18, 0.15],
+          [0.55, 0.15],
+          [0.5, 0.12],
+          [0, 0.12],
+        ]),
+        96,
+      ),
+      metal,
+    )
+    this.opener.add(lid)
+    return H + 0.15
+  }
+
   show(it: Item) {
     if (isBrush(it)) this.showBrush(it)
     else this.showPaint(it)
@@ -484,16 +617,27 @@ export class PotViewer {
 
     const extra = extraHeight(p)
     const style: DropperStyle = DROPPER_STYLE[p.brand] ?? 'generic'
-    const key = `${brand.container}|${extra}|${style}`
+    const key = `${brand.container}|${extra}|${style}|${p.brand}`
     if (key !== this.builtKey) {
       this.builtKey = key
       this.clearPot()
       this.pot.rotation.z = 0
-      const height = brand.container === 'pot' ? this.buildJar(extra) : this.buildDropper(style)
+      const height =
+        brand.container === 'pot'
+          ? this.buildJar(extra)
+          : brand.container === 'jar'
+            ? this.buildScrewJar(SCREW_JARS[p.brand] ?? SCREW_JARS.tamiya)
+            : brand.container === 'tin'
+              ? this.buildTin()
+              : this.buildDropper(style)
       this.frame(height)
     }
 
-    if (brand.container === 'pot') {
+    if (brand.container === 'pot' && POT_LABELS[p.brand]) {
+      this.labelMat.map?.dispose()
+      this.labelMat.map = POT_LABELS[p.brand]!(p)
+      this.labelMat.needsUpdate = true
+    } else if (brand.container === 'pot') {
       this.labelMat.map?.dispose()
       this.labelMat.map =
         p.brand !== 'citadel' ? printedLabel(p, brand) : p.range === 'Tone Pro' ? toneProLabel(p) : warhammerLabel(p)
@@ -1743,4 +1887,465 @@ const BRAND_LABELS: Partial<Record<string, (p: Paint) => THREE.CanvasTexture>> =
   turbodork: turboDorkLabel,
   kimera: kimeraLabel,
   p3: p3Label,
+}
+
+// ---------- Etiquetas de AMMO, AK Real Colors, Foundry, Coat d'Arms, Warcolours, Tamiya,
+// Mr. Hobby, Humbrol, Revell, Italeri y Mission Models ----------
+
+/** Lienzo para una etiqueta que envuelve un cilindro de radio r y alto h (2048 px = perímetro). */
+function canvasFor(r: number, h: number) {
+  const W = 2048
+  const H = Math.round((W * h) / (2 * Math.PI * (r + 0.006)))
+  const cv = document.createElement('canvas')
+  cv.width = W
+  cv.height = H
+  return { cv, g: cv.getContext('2d')!, W, H, cx: W / 2 }
+}
+
+const STENCIL = '"Stencil", "Impact", "Arial Black", sans-serif'
+
+function shield(g: CanvasRenderingContext2D, cx: number, top: number, w: number, h: number) {
+  g.beginPath()
+  g.moveTo(cx - w / 2, top)
+  g.lineTo(cx + w / 2, top)
+  g.lineTo(cx + w / 2, top + h * 0.55)
+  g.quadraticCurveTo(cx + w / 2, top + h * 0.9, cx, top + h)
+  g.quadraticCurveTo(cx - w / 2, top + h * 0.9, cx - w / 2, top + h * 0.55)
+  g.closePath()
+}
+
+/** AMMO by Mig: etiqueta negra, franja blanca con el código, logotipo «mig» y «ACRYLIC COLOR». */
+function migLabel(p: Paint): THREE.CanvasTexture {
+  const { cv, g, W, H, cx } = labelCanvas('vallejo')
+  g.fillStyle = '#0d0d0d'
+  g.fillRect(0, 0, W, H)
+  g.fillStyle = '#f4f4f2'
+  g.fillRect(0, 40, W, 110)
+  g.fillStyle = '#111'
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  g.font = `800 80px ${CONDENSED}`
+  const code = (p.code ?? '').replace(/^AMIG0*/, 'A.MIG-')
+  g.fillText(code, cx, 125)
+  g.textAlign = 'left'
+  fitFont(g, p.name.toUpperCase(), 700, 56, 520, 30)
+  g.fillText(p.name.toUpperCase(), cx + 240, 120)
+  g.textAlign = 'right'
+  g.fillText(p.name.toUpperCase(), cx - 240, 120)
+
+  // Logotipo: placa cromada con «mig» naranja
+  g.textAlign = 'center'
+  const chrome = g.createLinearGradient(0, 230, 0, 520)
+  chrome.addColorStop(0, '#f2f2f2')
+  chrome.addColorStop(0.5, '#8d9196')
+  chrome.addColorStop(1, '#e8e8e8')
+  g.fillStyle = chrome
+  g.beginPath()
+  g.roundRect(cx - 250, 230, 500, 290, 40)
+  g.fill()
+  g.fillStyle = '#111'
+  g.beginPath()
+  g.roundRect(cx - 230, 250, 460, 250, 30)
+  g.fill()
+  const ora = g.createLinearGradient(0, 290, 0, 470)
+  ora.addColorStop(0, '#ffb347')
+  ora.addColorStop(1, '#e14b12')
+  g.fillStyle = ora
+  g.font = `italic 900 210px ${CONDENSED}`
+  g.fillText('mig', cx, 450)
+  g.fillStyle = '#ffffff'
+  g.font = `800 40px ${CONDENSED}`
+  g.fillText('AMMO', cx + 150, 300)
+  g.font = `italic 600 40px ${SERIF}`
+  g.fillText('jimenez', cx - 90, 490)
+
+  g.fillStyle = '#ffffff'
+  g.font = `900 110px ${CONDENSED}`
+  g.fillText(/wash/i.test(p.range) ? 'WASH' : 'ACRYLIC', cx, 650)
+  g.fillText('COLOR', cx, 760)
+  g.font = `italic 600 52px ${CONDENSED}`
+  g.fillText('Brush & Airbrush', cx, 830)
+  return texture(cv)
+}
+
+/** AK Real Colors: etiqueta negra con muestra del color, «REAL COLORS», código y nombre. */
+function akRealColorsLabel(p: Paint): THREE.CanvasTexture {
+  const j = SCREW_JARS.akrc
+  const { cv, g, W, H, cx } = canvasFor(j.r, j.labelH)
+  g.fillStyle = '#121212'
+  g.fillRect(0, 0, W, H)
+  g.fillStyle = p.hex
+  g.fillRect(cx - 280, 60, 560, 200)
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  g.fillStyle = '#ffffff'
+  g.font = `900 120px ${CONDENSED}`
+  g.fillText('REAL', cx, 400)
+  g.fillStyle = '#f0560a'
+  g.fillText('COLORS', cx, 515)
+  g.fillStyle = '#ffffff'
+  g.font = `800 90px ${CONDENSED}`
+  g.fillText(p.code ?? '', cx, 640)
+  nameLines(g, p.name, cx, 730, 540, (n) => `700 ${n}px ${CONDENSED}`, 58)
+  g.font = `600 40px ${CONDENSED}`
+  g.fillStyle = '#9a9a9a'
+  g.fillText('ACRYLIC LACQUER · 10 ml', cx, H - 40)
+  return texture(cv)
+}
+
+/** Etiqueta impresa en botes con tapa abatible (lienzo de 360°). */
+function potCanvas() {
+  const cv = document.createElement('canvas')
+  cv.width = JAR_W
+  cv.height = JAR_H
+  return { cv, g: cv.getContext('2d')!, cx: JAR_W / 2 }
+}
+
+/** Foundry Paint System: etiqueta crema con el código del triad grande y el nombre. */
+function foundryLabel(p: Paint): THREE.CanvasTexture {
+  const { cv, g, cx } = potCanvas()
+  g.fillStyle = '#efe6cf'
+  g.fillRect(cx - 520, 30, 1040, JAR_H - 60)
+  g.strokeStyle = '#6b1d1d'
+  g.lineWidth = 10
+  g.strokeRect(cx - 500, 50, 1000, JAR_H - 100)
+  g.fillStyle = '#6b1d1d'
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  g.font = `700 110px ${SERIF}`
+  g.fillText('FOUNDRY', cx, 170)
+  g.fillStyle = '#1a1a1a'
+  g.font = `900 170px ${CONDENSED}`
+  g.fillText(p.code ?? '', cx, 360)
+  nameLines(g, p.name.toUpperCase(), cx, 470, 880, (n) => `700 ${n}px ${CONDENSED}`, 80)
+  return texture(cv)
+}
+
+/** Coat d'Arms: etiqueta blanca con escudo heráldico, número y nombre. */
+function coatDArmsLabel(p: Paint): THREE.CanvasTexture {
+  const { cv, g, cx } = potCanvas()
+  g.fillStyle = '#f7f5ef'
+  g.fillRect(cx - 520, 30, 1040, JAR_H - 60)
+  g.fillStyle = '#1d3b7a'
+  shield(g, cx - 330, 90, 220, 270)
+  g.fill()
+  g.fillStyle = '#c9a227'
+  g.fillRect(cx - 440, 180, 220, 40)
+  g.fillStyle = '#1a1a1a'
+  g.textAlign = 'left'
+  g.textBaseline = 'alphabetic'
+  g.font = `700 92px ${SERIF}`
+  g.fillText("Coat d'Arms", cx - 180, 190)
+  g.font = `900 130px ${CONDENSED}`
+  g.fillText(p.code ?? '', cx - 180, 340)
+  g.textAlign = 'center'
+  nameLines(g, p.name.toUpperCase(), cx, 480, 900, (n) => `700 ${n}px ${CONDENSED}`, 76)
+  return texture(cv)
+}
+
+/** Warcolours: etiqueta blanca con la calavera del logotipo, marca y nombre. */
+function warcoloursLabel(p: Paint): THREE.CanvasTexture {
+  const { cv, g, W, H, cx } = labelCanvas('generic')
+  g.fillStyle = '#f7f6f2'
+  g.fillRect(0, 0, W, H)
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  g.fillStyle = '#1a1a1a'
+  g.font = `700 70px ${SERIF}`
+  g.fillText('warcolours', cx, 130)
+  // Calavera estilizada
+  const sy = 330
+  g.beginPath()
+  g.arc(cx, sy, 110, Math.PI, 0)
+  g.lineTo(cx + 80, sy + 90)
+  g.lineTo(cx + 40, sy + 160)
+  g.lineTo(cx - 40, sy + 160)
+  g.lineTo(cx - 80, sy + 90)
+  g.closePath()
+  g.fill()
+  g.fillStyle = '#f7f6f2'
+  for (const dx of [-45, 45]) {
+    g.beginPath()
+    g.arc(cx + dx, sy + 20, 32, 0, Math.PI * 2)
+    g.fill()
+  }
+  g.beginPath()
+  g.moveTo(cx, sy + 60)
+  g.lineTo(cx - 16, sy + 95)
+  g.lineTo(cx + 16, sy + 95)
+  g.fill()
+  g.fillStyle = '#1a1a1a'
+  nameLines(g, p.name.toLowerCase(), cx, 620, 560, (n) => `700 ${n}px ${SERIF}`, 70)
+  g.fillStyle = '#666'
+  g.font = `600 44px ${CONDENSED}`
+  g.fillText(`${p.range.toUpperCase()} · 15 ml`, cx, 760)
+  return texture(cv)
+}
+
+/** Tamiya mini: etiqueta blanca con la estrella roja y azul, el código en un hexágono y el nombre. */
+function tamiyaLabel(p: Paint): THREE.CanvasTexture {
+  const j = SCREW_JARS.tamiya
+  const { cv, g, W, H, cx } = canvasFor(j.r, j.labelH)
+  g.fillStyle = '#ffffff'
+  g.fillRect(0, 0, W, H)
+  // Estrella de dos colores
+  const star = (x: number, y: number, r: number) => {
+    g.beginPath()
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5
+      const rr = i % 2 ? r * 0.45 : r
+      g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr)
+    }
+    g.closePath()
+  }
+  g.fillStyle = '#d7141a'
+  star(cx - 330, 110, 60)
+  g.fill()
+  g.fillStyle = '#1c3f94'
+  star(cx - 300, 110, 34)
+  g.fill()
+  g.fillStyle = '#1a1a1a'
+  g.textAlign = 'left'
+  g.textBaseline = 'alphabetic'
+  g.font = `900 72px ${CONDENSED}`
+  g.fillText('TAMIYA', cx - 240, 135)
+  g.font = `700 40px ${CONDENSED}`
+  g.fillText('ACRYLIC PAINT MINI', cx - 240, 185)
+
+  // Hexágono negro con el código
+  const hx = cx - 220
+  const hy = 380
+  g.fillStyle = '#111'
+  g.beginPath()
+  for (let i = 0; i < 6; i++) {
+    const a = (i * Math.PI) / 3
+    g.lineTo(hx + Math.cos(a) * 150, hy + Math.sin(a) * 150)
+  }
+  g.closePath()
+  g.fill()
+  g.fillStyle = '#fff'
+  g.textAlign = 'center'
+  g.font = `italic 900 100px ${CONDENSED}`
+  g.fillText(p.code ?? '', hx, hy + 35)
+  g.fillStyle = '#111'
+  g.textAlign = 'left'
+  fitFont(g, p.name.toUpperCase(), 800, 70, 430, 30)
+  g.fillText(p.name.toUpperCase(), cx - 40, 400)
+  g.fillStyle = p.hex
+  g.fillRect(cx - 40, 430, 380, 50)
+  return texture(cv)
+}
+
+/** Mr. Hobby Aqueous: franja azul «WATER BASED ACRYLIC PAINT», «HOBBY COLOR» y el código. */
+function mrHobbyLabel(p: Paint): THREE.CanvasTexture {
+  const j = SCREW_JARS.mrhobby
+  const { cv, g, W, H, cx } = canvasFor(j.r, j.labelH)
+  g.fillStyle = '#ffffff'
+  g.fillRect(0, 0, W, H)
+  g.fillStyle = '#29a8e0'
+  g.fillRect(0, 40, W, 240)
+  g.fillStyle = '#ffffff'
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  g.font = `800 50px ${CONDENSED}`
+  g.fillText(p.range === 'Acrysion' ? 'NEW WATER BASED ACRYLIC' : 'WATER BASED ACRYLIC PAINT', cx, 100)
+  g.fillStyle = '#123f8c'
+  g.save()
+  g.translate(cx - 90, 245)
+  g.transform(1, 0, -0.2, 1, 0, 0)
+  fitFont(g, p.range === 'Acrysion' ? 'ACRYSION' : 'HOBBY COLOR', 900, 104, 560, 50)
+  g.fillText(p.range === 'Acrysion' ? 'ACRYSION' : 'HOBBY COLOR', 0, 0)
+  g.font = `800 44px ${CONDENSED}`
+  if (p.range !== 'Acrysion') g.fillText('AQUEOUS', -150, -105)
+  g.restore()
+  // Logotipo Mr. Hobby
+  g.fillStyle = '#123f8c'
+  g.fillRect(cx + 330, 150, 140, 110)
+  g.fillStyle = '#fff'
+  g.font = `800 44px ${CONDENSED}`
+  g.fillText('Mr.', cx + 400, 195)
+  g.fillText('HOBBY', cx + 400, 245)
+  // Código y nombre
+  g.fillStyle = '#123f8c'
+  g.fillRect(cx - 420, 340, 200, 140)
+  g.fillStyle = '#fff'
+  g.font = `900 90px ${CONDENSED}`
+  g.fillText(p.code ?? '', cx - 320, 440)
+  g.fillStyle = '#111'
+  g.textAlign = 'left'
+  fitFont(g, p.name.toUpperCase(), 800, 64, 600, 30)
+  g.fillText(p.name.toUpperCase(), cx - 190, 430)
+  return texture(cv)
+}
+
+/** Humbrol Acrylic: arriba blanca con el logotipo, abajo roja con el número en un círculo negro. */
+function humbrolLabel(p: Paint): THREE.CanvasTexture {
+  const { cv, g, W, H, cx } = labelCanvas('reaper')
+  g.fillStyle = '#ffffff'
+  g.fillRect(0, 0, W, H)
+  // Parte roja con borde curvo
+  g.fillStyle = '#d4202a'
+  g.beginPath()
+  g.moveTo(0, H * 0.5)
+  g.quadraticCurveTo(cx, H * 0.36, W, H * 0.5)
+  g.lineTo(W, H)
+  g.lineTo(0, H)
+  g.closePath()
+  g.fill()
+  // Logotipo: franjas y «Humbrol»
+  const stripes = ['#d4202a', '#f5b400', '#1c4fa0']
+  stripes.forEach((c, i) => {
+    g.fillStyle = c
+    g.beginPath()
+    g.ellipse(cx - 230, 115 + i * 20, 46, 9, -0.3, 0, Math.PI * 2)
+    g.fill()
+  })
+  g.fillStyle = '#1c4fa0'
+  g.textAlign = 'left'
+  g.textBaseline = 'alphabetic'
+  g.font = `800 80px ${CONDENSED}`
+  g.fillText('Humbrol', cx - 170, 150)
+  g.font = `900 110px ${CONDENSED}`
+  g.textAlign = 'center'
+  g.fillText('Acrylic', cx, 280)
+  // Número en círculo negro
+  g.fillStyle = '#111'
+  g.beginPath()
+  g.arc(cx, H * 0.66, 90, 0, Math.PI * 2)
+  g.fill()
+  g.fillStyle = p.hex
+  g.beginPath()
+  g.arc(cx, H * 0.66, 70, 0, Math.PI * 2)
+  g.fill()
+  g.fillStyle = luminance(p.hex) > 0.4 ? '#111' : '#fff'
+  g.font = `900 70px ${CONDENSED}`
+  g.fillText(p.code ?? '', cx, H * 0.66 + 25)
+  g.fillStyle = '#fff'
+  g.font = `700 52px ${CONDENSED}`
+  g.textAlign = 'left'
+  g.fillText('14ml e', cx - 300, H - 40)
+  g.textAlign = 'right'
+  fitFont(g, p.name, 700, 46, 360, 24)
+  g.fillText(p.name, cx + 300, H - 40)
+  return texture(cv)
+}
+
+/** Revell Email Color: lata con etiqueta azul, logotipo rojo y «EMAIL COLOR». */
+function revellLabel(p: Paint): THREE.CanvasTexture {
+  const { cv, g, W, H, cx } = canvasFor(0.98, 1.05)
+  g.fillStyle = '#1b5fae'
+  g.fillRect(0, 0, W, H)
+  // Logotipo: rectángulo rojo con «Revell» y franjas
+  g.fillStyle = '#d7141a'
+  g.fillRect(cx - 230, 50, 330, 120)
+  g.fillStyle = '#fff'
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  g.font = `italic 800 92px ${SERIF}`
+  g.fillText('Revell', cx - 65, 140)
+  for (let i = 0; i < 4; i++) {
+    g.fillStyle = i % 2 ? '#1b5fae' : '#fff'
+    g.fillRect(cx + 100, 50 + i * 30, 70, 30)
+  }
+  g.fillStyle = '#fff'
+  g.font = `700 52px ${CONDENSED}`
+  g.fillText('14 ml', cx + 260, 110)
+  g.save()
+  g.translate(cx, 300)
+  g.scale(1, 1.25)
+  g.font = `900 110px ${CONDENSED}`
+  g.fillText('EMAIL COLOR', 0, 0)
+  g.restore()
+  g.font = `600 44px ${CONDENSED}`
+  g.fillText('Email-Farbe · Enamel Paint · Peinture émail', cx, 380)
+  g.fillStyle = p.hex
+  g.fillRect(cx - 360, 410, 140, 90)
+  g.fillStyle = '#fff'
+  g.textAlign = 'left'
+  fitFont(g, `${p.name} · ${p.range}`, 700, 56, 560, 28)
+  g.fillText(`${p.name} · ${p.range}`, cx - 200, 475)
+  return texture(cv)
+}
+
+/** Italeri Acrylic Paint: etiqueta blanca con el escudo azul del logotipo, código y nombre. */
+function italeriLabel(p: Paint): THREE.CanvasTexture {
+  const { cv, g, W, H, cx } = labelCanvas('reaper')
+  g.fillStyle = '#ffffff'
+  g.fillRect(0, 0, W, H)
+  g.fillStyle = '#1c4fa0'
+  shield(g, cx, 60, 300, 360)
+  g.fill()
+  g.fillStyle = '#ffffff'
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  g.font = `900 150px ${SERIF}`
+  g.fillText('A', cx, 260)
+  g.fillStyle = '#d7141a'
+  g.fillRect(cx - 150, 290, 300, 50)
+  g.fillStyle = '#fff'
+  g.font = `800 40px ${CONDENSED}`
+  g.fillText('ITALERI', cx, 330)
+  g.font = `800 34px ${CONDENSED}`
+  g.fillText('ACRYLIC PAINT', cx, 385)
+  g.fillStyle = '#111'
+  g.font = `800 70px ${CONDENSED}`
+  g.fillText(p.code ?? '', cx, 520)
+  nameLines(g, p.name.toUpperCase(), cx, 600, 560, (n) => `700 ${n}px ${CONDENSED}`, 58)
+  return texture(cv)
+}
+
+/** Mission Models: etiqueta gris claro con «MISSION MODELS» en estarcido y el aerógrafo. */
+function missionLabel(p: Paint): THREE.CanvasTexture {
+  const { cv, g, W, H, cx } = labelCanvas('kimera')
+  g.fillStyle = '#d6d7d9'
+  g.fillRect(0, 0, W, H)
+  g.strokeStyle = '#222'
+  g.lineWidth = 6
+  g.strokeRect(cx - 330, 40, 660, H - 80)
+  g.fillStyle = '#222'
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  g.font = `italic 600 44px ${SERIF}`
+  g.fillText('Premium', cx, 110)
+  g.font = `700 36px ${CONDENSED}`
+  g.fillText('H O B B Y   P A I N T S', cx, 155)
+  g.font = `900 100px ${STENCIL}`
+  g.fillText('MISSION', cx, 270)
+  g.fillText('MODELS', cx, 370)
+  g.font = `600 36px ${CONDENSED}`
+  g.fillText('Permanent water-based paint', cx, 430)
+  // Aerógrafo e indicador «1 fl.oz.»
+  g.fillRect(cx - 220, 520, 180, 30)
+  g.beginPath()
+  g.moveTo(cx - 40, 510)
+  g.lineTo(cx + 20, 535)
+  g.lineTo(cx - 40, 560)
+  g.fill()
+  g.fillRect(cx - 160, 470, 40, 50)
+  g.strokeRect(cx + 80, 470, 140, 140)
+  g.font = `900 80px ${CONDENSED}`
+  g.fillText('1', cx + 130, 560)
+  g.font = `700 30px ${CONDENSED}`
+  g.fillText('fl.oz.', cx + 180, 590)
+  g.font = `800 52px ${CONDENSED}`
+  g.fillText(p.code ?? '', cx, 690)
+  nameLines(g, p.name, cx, 770, 600, (n) => `700 ${n}px ${CONDENSED}`, 48)
+  return texture(cv)
+}
+
+Object.assign(BRAND_LABELS, {
+  mig: migLabel,
+  akrc: akRealColorsLabel,
+  warcolours: warcoloursLabel,
+  tamiya: tamiyaLabel,
+  mrhobby: mrHobbyLabel,
+  humbrol: humbrolLabel,
+  revell: revellLabel,
+  italeri: italeriLabel,
+  mission: missionLabel,
+})
+
+const POT_LABELS: Partial<Record<string, (p: Paint) => THREE.CanvasTexture>> = {
+  foundry: foundryLabel,
+  coatdarms: coatDArmsLabel,
 }

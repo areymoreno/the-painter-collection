@@ -12,6 +12,7 @@ const BASE = 'https://raw.githubusercontent.com/Arcturus5404/miniature-paints/ma
 /**
  * file: fichero .md de origen
  * sets: gamas a incluir → nombre que se mostrará (null = todas, con el nombre original)
+ * extra: otros ficheros que se añaden a la misma marca
  */
 const BRANDS = {
   vallejo: {
@@ -69,7 +70,79 @@ const BRANDS = {
       'Monument Pro Signature Series': 'Signature Series',
       'Monument Pro Acrylic Wash': 'Wash',
     },
+    // Colaboración con Creature Caster
+    extra: [
+      {
+        file: 'Creature.md',
+        sets: { 'Monument Pro Acryl': 'Creature Caster', 'Monument Pro Acryl Transparent': 'Creature Caster' },
+      },
+    ],
   },
+  mig: {
+    file: 'Mig.md',
+    sets: { Acrylics: 'Acrylic', Washes: 'Wash' },
+  },
+  akrc: {
+    file: 'AKRC.md',
+    sets: {
+      'Real Colors - Standard': 'Standard',
+      'Real Colors - AFV': 'AFV',
+      'Real Colors - WWII': 'WWII',
+      'Real Colors - Air': 'Air',
+      'Real Colors - Modern': 'Modern',
+      'Real Colors - Clear': 'Clear',
+    },
+  },
+  foundry: { file: 'Foundry.md', sets: { 'Foundry Paint System': 'Paint System' } },
+  coatdarms: {
+    file: 'CoatDArmes.md',
+    sets: {
+      'Fantasy Range': 'Fantasy',
+      'Fantasy Range - Ink Wash': 'Ink Wash',
+      'Military Range': 'Military',
+      'World War II Range': 'WWII',
+      'Brushscape Range': 'Brushscape',
+    },
+  },
+  warcolours: {
+    file: 'Warcolours.md',
+    sets: {
+      'Layer paints': 'Layer',
+      'One-coat paints': 'One-coat',
+      'Metallic paints': 'Metallic',
+      'Transparent paints': 'Transparent',
+      'Inks for Shading and Glazing': 'Ink',
+      'Glazing paints': 'Glaze',
+    },
+  },
+  tamiya: {
+    file: 'Tamiya.md',
+    sets: { 'Acrylics Mini Flat': 'Acrylic Mini Flat (XF)', 'Acrylics Mini Gloss': 'Acrylic Mini Gloss (X)' },
+  },
+  mrhobby: {
+    file: 'MrHobby.md',
+    sets: { 'Aqueous Hobby Color': 'Aqueous Hobby Color', Acrysion: 'Acrysion' },
+  },
+  humbrol: {
+    file: 'Humbrol.md',
+    sets: {
+      'Humbrol Acrylics - Matt': 'Matt',
+      'Humbrol Acrylics - Gloss': 'Gloss',
+      'Humbrol Acrylics - Satin': 'Satin',
+      'Humbrol Acrylics - Metallics': 'Metallic',
+    },
+  },
+  revell: {
+    file: 'Revell.md',
+    sets: {
+      'Email Color - Matt': 'Matt',
+      'Email Color - Silk': 'Silk',
+      'Email Color - Gloss': 'Gloss',
+      'Email Color - Metallic': 'Metallic',
+    },
+  },
+  italeri: { file: 'Italeri.md', sets: { 'Italeri Acrylic Paint': 'Acrylic' } },
+  mission: { file: 'MissionModels.md', sets: { 'Mission Models': 'Acrylic' } },
   twothincoats: {
     file: 'Duncan.md',
     sets: { 'Wave 1': 'Wave 1', 'Wave 2': 'Wave 2', 'Wave 3': 'Wave 3' },
@@ -123,7 +196,7 @@ function parse(md, sets) {
     const range = sets ? sets[set] : set.replace(/\s+/g, ' ').replace(/ Range$/, '')
     if (!range) continue
     const hex = c[iHex]?.match(/#([0-9A-Fa-f]{6})/)?.[1]
-    const name = c[iName]?.replace(/\s+/g, ' ')
+    const name = c[iName]?.replace(/\s+/g, ' ').replace(/\s*\d+ ?ml$/i, '')
     if (!hex || !name) continue
     const key = `${range}|${name.toLowerCase()}`
     if (seen.has(key)) continue
@@ -135,10 +208,13 @@ function parse(md, sets) {
 }
 
 await mkdir(new URL('../src/data/', import.meta.url), { recursive: true })
-for (const [id, { file, sets }] of Object.entries(BRANDS)) {
-  const res = await fetch(BASE + file)
-  if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`)
-  const paints = parse(await res.text(), sets)
+for (const [id, { file, sets, extra = [] }] of Object.entries(BRANDS)) {
+  const paints = []
+  for (const src of [{ file, sets }, ...extra]) {
+    const res = await fetch(BASE + src.file)
+    if (!res.ok) throw new Error(`${src.file}: HTTP ${res.status}`)
+    paints.push(...parse(await res.text(), src.sets))
+  }
   await writeFile(new URL(`../src/data/${id}.json`, import.meta.url), JSON.stringify(paints) + '\n')
   console.log(`${id}: ${paints.length} pinturas`)
 }

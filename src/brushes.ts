@@ -1,8 +1,10 @@
 // Catálogo de pinceles. Recopilado a mano a partir de tiendas y reseñas (oct. 2026).
 // Confirmado: gamas y tallas de Citadel, W&N Series 7 Miniature (000–6), Artis Opus
 // Series D/D+ y las tallas de The Army Painter; medidas de Raphaël 4/0 y 4.
-// Aproximado: el resto de medidas de pelo (mm), los colores de mango y las tallas de
-// Artis Opus Series S.
+// Rosemary Series 33 y Princeton 3950 (1 y 10) con las medidas publicadas por tiendas;
+// colores de mango de da Vinci, Monument y Squidmar según fotos de producto.
+// Aproximado: el resto de medidas de pelo (mm), los colores de mango de Rosemary, Vallejo
+// y Princeton, y las tallas de Artis Opus Series S.
 
 import type { Paint } from './paints'
 
@@ -15,6 +17,8 @@ export interface BrushBrand {
   /** Color del mango y de la virola */
   handle: string
   ferrule: string
+  /** Gamas con mango o virola de otro color */
+  ranges?: Record<string, { handle?: string; ferrule?: string }>
 }
 
 export interface Brush {
@@ -129,6 +133,89 @@ const DATA: { brand: BrushBrand; rows: Row[] }[] = [
       ['Series D+', 'XXL', 'drybrush', 'synthetic', 13, 9],
     ],
   },
+  {
+    brand: { id: 'rosemary', name: 'Rosemary & Co', handle: '#1b1b1b', ferrule: '#c9ccd0' },
+    rows: [
+      ['Series 33', '10/0', 'round', 'sable', 0.8, 6.4],
+      ['Series 33', '3/0', 'round', 'sable', 1, 7.8],
+      ['Series 33', '2/0', 'round', 'sable', 1.4, 8.6],
+      ['Series 33', '0', 'round', 'sable', 1.5, 9.8],
+      ['Series 33', '2', 'round', 'sable', 2, 14.1],
+      ['Series 33', '4', 'round', 'sable', 3.4, 15.7],
+    ],
+  },
+  {
+    brand: { id: 'davinci', name: 'da Vinci', handle: '#0f0f10', ferrule: '#cfd2d6' },
+    rows: [
+      ['Maestro Series 10', '0', 'round', 'sable', 1.4, 7],
+      ['Maestro Series 10', '1', 'round', 'sable', 1.8, 9],
+      ['Maestro Series 10', '2', 'round', 'sable', 2.3, 11],
+      ['Maestro Series 10', '3', 'round', 'sable', 2.8, 13],
+      ['Maestro Series 10', '4', 'round', 'sable', 3.3, 15],
+    ],
+  },
+  {
+    brand: {
+      id: 'monument',
+      name: 'Monument Hobbies',
+      handle: '#6a1420',
+      ferrule: '#c9ccd0',
+      ranges: { 'PRO Synthetic': { handle: '#1b2340' } },
+    },
+    rows: [
+      ['PRO Sable', '0', 'round', 'sable', 1.3, 8],
+      ['PRO Sable', '1', 'round', 'sable', 1.7, 9],
+      ['PRO Sable', '2', 'round', 'sable', 2.2, 11],
+      ['PRO Sable', '3', 'round', 'sable', 2.7, 12],
+      ['PRO Sable', '4', 'round', 'sable', 3.2, 14],
+      ['PRO Synthetic', '10/0', 'round', 'synthetic', 0.6, 5],
+      ['PRO Synthetic', '00', 'round', 'synthetic', 1, 7],
+      ['PRO Synthetic', '1', 'round', 'synthetic', 1.7, 9],
+      ['PRO Synthetic', '2', 'round', 'synthetic', 2.2, 11],
+      ['PRO Synthetic', '4', 'round', 'synthetic', 3.2, 14],
+      ['PRO Synthetic', '6', 'round', 'synthetic', 4, 17],
+    ],
+  },
+  {
+    brand: {
+      id: 'squidmar',
+      name: 'Squidmar',
+      handle: '#111112',
+      ferrule: '#c8a35a',
+      ranges: { 'Wight MKI': { handle: '#ecebe6', ferrule: '#c9ccd0' } },
+    },
+    rows: [
+      ['Kolinsky MKII', 'XS', 'round', 'sable', 1, 6],
+      ['Kolinsky MKII', 'S', 'round', 'sable', 1.4, 8],
+      ['Kolinsky MKII', 'M', 'round', 'sable', 1.9, 10],
+      ['Kolinsky MKII', 'L', 'round', 'sable', 2.4, 12],
+      ['Kolinsky MKII', 'XL', 'round', 'sable', 3, 14],
+      ['Kolinsky MKII', 'B', 'round', 'sable', 3.4, 12, 'Kolinsky MKII Bold'],
+      ['Wight MKI', 'XS', 'round', 'synthetic', 1, 6],
+      ['Wight MKI', 'S', 'round', 'synthetic', 1.4, 8],
+      ['Wight MKI', 'M', 'round', 'synthetic', 1.9, 10],
+      ['Wight MKI', 'L', 'round', 'synthetic', 2.4, 12],
+      ['Wight MKI', 'XL', 'round', 'synthetic', 3, 14],
+    ],
+  },
+  {
+    brand: { id: 'vallejo', name: 'Vallejo', handle: '#b8865a', ferrule: '#c9ccd0' },
+    rows: [
+      ['Kolinsky Tajmir', '0', 'round', 'sable', 1.4, 8],
+      ['Kolinsky Tajmir', '1', 'round', 'sable', 1.8, 10],
+      ['Kolinsky Tajmir', '2', 'round', 'sable', 2.3, 12],
+    ],
+  },
+  {
+    brand: { id: 'princeton', name: 'Princeton', handle: '#2a2a2c', ferrule: '#c9ccd0' },
+    rows: [
+      ['Velvetouch 3950', '20/0', 'round', 'synthetic', 0.4, 4, 'Velvetouch Mini Round 20/0'],
+      ['Velvetouch 3950', '12/0', 'round', 'synthetic', 0.6, 5, 'Velvetouch Mini Round 12/0'],
+      ['Velvetouch 3950', '1', 'round', 'synthetic', 1.9, 9.5],
+      ['Velvetouch 3950', '4', 'round', 'synthetic', 2.9, 13],
+      ['Velvetouch 3950', '10', 'round', 'synthetic', 5.6, 24],
+    ],
+  },
 ]
 
 export const BRUSH_BRANDS: BrushBrand[] = DATA.map((d) => d.brand)
@@ -147,8 +234,8 @@ const BRUSHES: Record<string, Brush[]> = Object.fromEntries(
       hair,
       width,
       length,
-      handle: brand.handle,
-      ferrule: brand.ferrule,
+      handle: brand.ranges?.[range]?.handle ?? brand.handle,
+      ferrule: brand.ranges?.[range]?.ferrule ?? brand.ferrule,
     })),
   ]),
 )

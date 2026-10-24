@@ -475,7 +475,10 @@ const SPRITE_PAD = 1.35
 
 export function renderSprite(p: Item, r: number): HTMLCanvasElement {
   if (isBrush(p)) return renderBrushTip(p, r)
-  return brandById(p.brand).container === 'dropper' ? renderDropperCap(p, r) : renderCap(p, r)
+  const container = brandById(p.brand).container
+  if (container === 'jar') return renderScrewCap(p, r)
+  if (container === 'tin') return renderTinLid(p, r)
+  return container === 'dropper' ? renderDropperCap(p, r) : renderCap(p, r)
 }
 
 export function renderCap(p: Paint, r: number): HTMLCanvasElement {
@@ -885,6 +888,154 @@ export function renderBrushTip(b: Brush, r: number): HTMLCanvasElement {
     g.globalAlpha = 1
   }
 
+  return cv
+}
+
+// ---------- Tarro con tapón de rosca y lata vistos desde arriba ----------
+
+function spriteCanvas(r: number) {
+  const size = Math.ceil(r * 2 * SPRITE_PAD)
+  const cv = document.createElement('canvas')
+  cv.width = cv.height = size
+  const g = cv.getContext('2d')!
+  g.translate(size / 2, size / 2)
+  const circle = (rad: number) => {
+    g.beginPath()
+    g.arc(0, 0, rad, 0, Math.PI * 2)
+  }
+  // Sombra bajo el envase
+  g.save()
+  g.shadowColor = 'rgba(0,0,0,0.6)'
+  g.shadowBlur = r * 0.22
+  g.shadowOffsetY = r * 0.1
+  g.fillStyle = '#111'
+  circle(r)
+  g.fill()
+  g.restore()
+  return { cv, g, circle }
+}
+
+function rangeDot(g: CanvasRenderingContext2D, p: Paint, r: number) {
+  g.fillStyle = rangeAccent(p)
+  g.strokeStyle = 'rgba(0,0,0,0.4)'
+  g.lineWidth = r * 0.015
+  g.beginPath()
+  g.arc(0, r * 0.9, r * 0.05, 0, Math.PI * 2)
+  g.fill()
+  g.stroke()
+}
+
+/** Tarro de cristal (Tamiya, Mr. Hobby, AK Real Colors): hombro del color y tapón de rosca liso. */
+export function renderScrewCap(p: Paint, r: number): HTMLCanvasElement {
+  const { cv, g, circle } = spriteCanvas(r)
+  const cap = brandById(p.brand).cap
+
+  // Hombro de cristal con la pintura
+  g.fillStyle = p.hex
+  circle(r)
+  g.fill()
+  const glass = g.createRadialGradient(0, 0, r * 0.6, 0, 0, r)
+  glass.addColorStop(0, 'rgba(255,255,255,0.25)')
+  glass.addColorStop(1, 'rgba(0,0,0,0.35)')
+  g.fillStyle = glass
+  g.fill()
+
+  // Tapón: canto estriado y cara plana
+  const capR = r * 0.8
+  g.save()
+  g.shadowColor = 'rgba(0,0,0,0.45)'
+  g.shadowBlur = r * 0.07
+  g.fillStyle = mix(cap, '#000000', 0.2)
+  circle(capR)
+  g.fill()
+  g.restore()
+  g.strokeStyle = mix(cap, '#000000', 0.4)
+  g.lineWidth = Math.max(0.6, r * 0.015)
+  for (let i = 0; i < 72; i++) {
+    const a = (i / 72) * Math.PI * 2
+    g.beginPath()
+    g.moveTo(Math.cos(a) * capR * 0.9, Math.sin(a) * capR * 0.9)
+    g.lineTo(Math.cos(a) * capR, Math.sin(a) * capR)
+    g.stroke()
+  }
+  const face = g.createRadialGradient(-capR * 0.3, -capR * 0.35, capR * 0.05, 0, 0, capR * 0.9)
+  face.addColorStop(0, mix(cap, '#ffffff', 0.35))
+  face.addColorStop(0.7, cap)
+  face.addColorStop(1, mix(cap, '#000000', 0.2))
+  g.fillStyle = face
+  circle(capR * 0.88)
+  g.fill()
+
+  rangeDot(g, p, r)
+  if (r >= 26) {
+    // Texto sobre el tapón (código grande y nombre)
+    const ink = luminance(cap) > 0.4 ? 'rgba(25,24,22,0.9)' : 'rgba(255,255,255,0.92)'
+    g.fillStyle = ink
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.font = `900 ${r * 0.26}px Inter, system-ui, sans-serif`
+    g.fillText(p.code ?? '', 0, -r * 0.14)
+    let fs = r * 0.13
+    g.font = `700 ${fs}px Inter, system-ui, sans-serif`
+    const lines = wrap(g, p.name.toUpperCase(), r * 1.15)
+    while (lines.length > 2 && fs > r * 0.08) {
+      fs *= 0.9
+      g.font = `700 ${fs}px Inter, system-ui, sans-serif`
+      lines.splice(0, lines.length, ...wrap(g, p.name.toUpperCase(), r * 1.15))
+    }
+    lines.slice(0, 2).forEach((l, i) => g.fillText(l, 0, r * 0.14 + i * fs * 1.1))
+  }
+  return cv
+}
+
+/** Lata metálica (Revell): tapa plateada con anillos y una muestra del color en el centro. */
+export function renderTinLid(p: Paint, r: number): HTMLCanvasElement {
+  const { cv, g, circle } = spriteCanvas(r)
+  const metal = g.createConicGradient(0.5, 0, 0)
+  for (let i = 0; i <= 8; i++) metal.addColorStop(i / 8, i % 2 ? '#eef0f2' : '#9da2a8')
+  g.fillStyle = metal
+  circle(r)
+  g.fill()
+  for (const [k, a] of [
+    [0.93, 0.35],
+    [0.8, 0.25],
+    [0.62, 0.2],
+  ]) {
+    g.strokeStyle = `rgba(0,0,0,${a})`
+    g.lineWidth = r * 0.025
+    circle(r * k)
+    g.stroke()
+    g.strokeStyle = 'rgba(255,255,255,0.6)'
+    g.lineWidth = r * 0.012
+    g.beginPath()
+    g.arc(0, 0, r * k - r * 0.02, Math.PI * 1.1, Math.PI * 1.7)
+    g.stroke()
+  }
+  g.fillStyle = p.hex
+  circle(r * 0.5)
+  g.fill()
+  g.strokeStyle = 'rgba(0,0,0,0.3)'
+  g.lineWidth = r * 0.02
+  g.stroke()
+
+  rangeDot(g, p, r)
+  if (r >= 26) {
+    g.fillStyle = luminance(p.hex) > 0.4 ? 'rgba(20,19,18,0.9)' : 'rgba(255,255,255,0.95)'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    let fs = r * 0.13
+    g.font = `800 ${fs}px Inter, system-ui, sans-serif`
+    let lines = wrap(g, p.name.toUpperCase(), r * 0.85)
+    while (lines.length > 3 && fs > r * 0.07) {
+      fs *= 0.9
+      g.font = `800 ${fs}px Inter, system-ui, sans-serif`
+      lines = wrap(g, p.name.toUpperCase(), r * 0.85)
+    }
+    lines.forEach((l, i) => g.fillText(l, 0, (i - (lines.length - 1) / 2) * fs * 1.1))
+    g.fillStyle = 'rgba(30,30,30,0.75)'
+    g.font = `700 ${r * 0.09}px Inter, system-ui, sans-serif`
+    arcText(g, `REVELL · ${p.range}`.toUpperCase(), r * 0.71, true)
+  }
   return cv
 }
 
