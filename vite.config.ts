@@ -21,5 +21,7 @@ export default defineConfig({
   plugins: [absoluteOgImage()],
   build: {
     chunkSizeWarningLimit: 700,
+    // Lista de archivos generados: el service worker la usa para precargarlos (uso sin conexión)
+    manifest: 'asset-manifest.json',
   },
 })

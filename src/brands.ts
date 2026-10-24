@@ -9,6 +9,8 @@ export interface Brand {
   container: Container
   /** Color del plástico de la tapa (pot) o del tapón (dropper) */
   cap: string
+  /** Forma del tapón cuentagotas visto desde arriba: cónico, escalonado o con boquilla larga */
+  capStyle?: 'cone' | 'stepped' | 'nozzle' | 'flip'
   load: () => Promise<Paint[]>
 }
 
@@ -33,6 +35,7 @@ export const BRANDS: Brand[] = [
     name: 'Vallejo',
     container: 'dropper',
     cap: '#f1f0ec',
+    capStyle: 'stepped',
     load: fromJson('vallejo', () => import('./data/vallejo.json')),
   },
   {
@@ -40,13 +43,15 @@ export const BRANDS: Brand[] = [
     name: 'AK Interactive',
     container: 'dropper',
     cap: '#f4f4f2',
+    capStyle: 'stepped',
     load: fromJson('ak', () => import('./data/ak.json')),
   },
   {
     id: 'armypainter',
     name: 'The Army Painter',
     container: 'dropper',
-    cap: '#1d1d1f',
+    cap: '#f1f0ec',
+    capStyle: 'stepped',
     load: fromJson('armypainter', () => import('./data/armypainter.json')),
   },
   {
@@ -54,6 +59,7 @@ export const BRANDS: Brand[] = [
     name: 'Scale75',
     container: 'dropper',
     cap: '#141414',
+    capStyle: 'stepped',
     load: fromJson('scale75', () => import('./data/scale75.json')),
   },
   {
@@ -68,6 +74,7 @@ export const BRANDS: Brand[] = [
     name: 'Monument Pro Acryl',
     container: 'dropper',
     cap: '#1b1b1d',
+    capStyle: 'nozzle',
     load: fromJson('monument', () => import('./data/monument.json')),
   },
   {
@@ -82,13 +89,15 @@ export const BRANDS: Brand[] = [
     name: 'Green Stuff World',
     container: 'dropper',
     cap: '#1f1f20',
+    capStyle: 'stepped',
     load: fromJson('greenstuffworld', () => import('./data/greenstuffworld.json')),
   },
   {
     id: 'kimera',
     name: 'Kimera Kolors',
     container: 'dropper',
-    cap: '#141414',
+    cap: '#f3f2ee',
+    capStyle: 'flip',
     load: fromJson('kimera', () => import('./data/kimera.json')),
   },
   {
@@ -101,8 +110,10 @@ export const BRANDS: Brand[] = [
   {
     id: 'p3',
     name: 'P3 (Privateer Press)',
-    container: 'pot',
-    cap: '#2a2a2b',
+    // Desde que la fabrica Steamforged viene en frasco cuentagotas
+    container: 'dropper',
+    cap: '#f1f0ec',
+    capStyle: 'stepped',
     load: fromJson('p3', () => import('./data/p3.json')),
   },
 ]

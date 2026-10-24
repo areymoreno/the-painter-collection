@@ -1,4 +1,5 @@
 import { type Item, isBrush } from './brushes'
+import { loadJson, storeJson } from './storage'
 
 // Colección personal: qué pinturas y pinceles tienes o quieres. Se guarda en el navegador.
 
@@ -26,18 +27,43 @@ export const modeOf = (it: Item) => (isBrush(it) ? 'pinceles' : 'pinturas')
 /** Clave única global: catálogo/marca/artículo */
 export const itemKey = (it: Item) => `${modeOf(it)}/${it.brand}/${itemSlug(it)}`
 
-function load(): Record<string, Status> {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
+const state: Record<string, Status> = loadJson(STORAGE_KEY, {})
+const listeners = new Set<() => void>()
+
+/** Avisa cuando cambia la colección (marcas, importaciones). */
+export function onCollectionChange(fn: () => void) {
+  listeners.add(fn)
 }
 
-const state = load()
+function save() {
+  storeJson(STORAGE_KEY, state)
+  for (const fn of listeners) fn()
+}
 
 export function statusOf(it: Item): Status | undefined {
   return state[itemKey(it)]
+}
+
+export const statusOfKey = (key: string): Status | undefined => state[key]
+
+/** Copia de la colección, p. ej. para exportarla. */
+export const collectionSnapshot = (): Record<string, Status> => ({ ...state })
+
+/**
+ * Incorpora marcas importadas. Con `replace` se descarta la colección actual; si no, se
+ * combinan y en caso de conflicto gana «lo tengo».
+ */
+export function mergeCollection(incoming: Record<string, Status>, replace = false): number {
+  if (replace) for (const k of Object.keys(state)) delete state[k]
+  let n = 0
+  for (const [k, v] of Object.entries(incoming)) {
+    if (v !== 'own' && v !== 'wish') continue
+    if (state[k] === 'own' && v === 'wish') continue
+    if (state[k] !== v) n++
+    state[k] = v
+  }
+  save()
+  return n
 }
 
 /** Activa el estado indicado o lo quita si ya estaba puesto. Devuelve el nuevo estado. */
@@ -45,9 +71,7 @@ export function toggleStatus(it: Item, s: Status): Status | undefined {
   const key = itemKey(it)
   if (state[key] === s) delete state[key]
   else state[key] = s
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } catch {}
+  save()
   return state[key]
 }
 

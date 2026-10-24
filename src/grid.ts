@@ -41,6 +41,9 @@ export class InfiniteGrid {
   private longPressTimer = 0
   private longPressed = false
 
+  /** Se llama al empezar a arrastrar la cuadrícula (p. ej. para plegar la cabecera). */
+  onPanStart: (() => void) | null = null
+
   private hover: Cell | null = null
   private hoverAnim = new Map<string, number>()
   private highlight: ((p: Item) => boolean) | null = null
@@ -186,8 +189,12 @@ export class InfiniteGrid {
 
       this.camX -= dx / this.zoom / this.pointers.size
       this.camY -= dy / this.zoom / this.pointers.size
+      const wasStill = this.dragMoved < 6
       this.dragMoved += Math.abs(dx) + Math.abs(dy)
-      if (this.dragMoved >= 6) clearTimeout(this.longPressTimer)
+      if (this.dragMoved >= 6) {
+        clearTimeout(this.longPressTimer)
+        if (wasStill) this.onPanStart?.()
+      }
 
       const now = performance.now()
       const dt = Math.max(1, now - this.lastMove)
@@ -513,7 +520,9 @@ export function renderCap(p: Paint, r: number): HTMLCanvasElement {
   g.fill()
 
   // Plástico gris esmerilado, ligeramente teñido por la pintura
-  const plastic = p.brand === 'citadel' ? '#a9a8a4' : brandById(p.brand).cap
+  // Las Tone Pro tienen la tapa de un esmerilado más claro
+  const plastic =
+    p.brand !== 'citadel' ? brandById(p.brand).cap : p.range === 'Tone Pro' ? '#d2d5d9' : '#a9a8a4'
   const frost = mix(p.hex, plastic, 0.68)
   const frostDark = mix(p.hex, mix(plastic, '#000000', 0.45), 0.7)
   const frostLight = mix(p.hex, mix(plastic, '#ffffff', 0.3), 0.78)
@@ -665,7 +674,7 @@ export function renderDropperCap(p: Paint, r: number): HTMLCanvasElement {
   g.strokeStyle = mix(cap, '#000000', 0.35)
   g.lineWidth = Math.max(0.6, r * 0.018)
   g.lineCap = 'butt'
-  for (let i = 0; i < 48; i++) {
+  for (let i = 0; i < (brandById(p.brand).capStyle === 'flip' ? 0 : 48); i++) {
     const a = (i / 48) * Math.PI * 2
     g.beginPath()
     g.moveTo(Math.cos(a) * capR * 0.86, Math.sin(a) * capR * 0.86)
@@ -673,31 +682,69 @@ export function renderDropperCap(p: Paint, r: number): HTMLCanvasElement {
     g.stroke()
   }
 
-  const cone = g.createRadialGradient(-capR * 0.25, -capR * 0.3, capR * 0.02, 0, 0, capR * 0.84)
-  cone.addColorStop(0, mix(cap, '#ffffff', 0.55))
-  cone.addColorStop(0.55, cap)
-  cone.addColorStop(1, mix(cap, '#000000', 0.3))
-  g.fillStyle = cone
-  circle(capR * 0.84)
-  g.fill()
-
-  // Aristas del cono
-  g.strokeStyle = 'rgba(0,0,0,0.08)'
-  g.lineWidth = Math.max(0.5, r * 0.01)
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2
-    g.beginPath()
-    g.moveTo(Math.cos(a) * capR * 0.15, Math.sin(a) * capR * 0.15)
-    g.lineTo(Math.cos(a) * capR * 0.84, Math.sin(a) * capR * 0.84)
-    g.stroke()
+  const capStyle = brandById(p.brand).capStyle ?? 'cone'
+  const dome = (rad: number, light = 0.55) => {
+    const gr = g.createRadialGradient(-rad * 0.3, -rad * 0.35, rad * 0.02, 0, 0, rad)
+    gr.addColorStop(0, mix(cap, '#ffffff', light))
+    gr.addColorStop(0.55, cap)
+    gr.addColorStop(1, mix(cap, '#000000', 0.3))
+    g.fillStyle = gr
+    circle(rad)
+    g.fill()
   }
 
-  // Punta
-  g.fillStyle = mix(cap, '#ffffff', 0.3)
-  circle(capR * 0.14)
-  g.fill()
-  g.strokeStyle = 'rgba(0,0,0,0.2)'
-  g.stroke()
+  if (capStyle === 'flip') {
+    // Tapa abatible plana (Kimera): disco liso con la pestaña de apertura
+    dome(capR * 0.95, 0.25)
+    g.strokeStyle = 'rgba(0,0,0,0.12)'
+    g.lineWidth = Math.max(0.5, r * 0.012)
+    circle(capR * 0.7)
+    g.stroke()
+    g.fillStyle = mix(cap, '#000000', 0.12)
+    g.beginPath()
+    g.roundRect(-capR * 0.22, capR * 0.82, capR * 0.44, capR * 0.2, capR * 0.06)
+    g.fill()
+  } else if (capStyle === 'stepped') {
+    // Tapón escalonado: tramo ancho, hombro y boquilla cilíndrica (Vallejo, AK, Army Painter)
+    dome(capR * 0.84, 0.35)
+    g.save()
+    g.shadowColor = 'rgba(0,0,0,0.35)'
+    g.shadowBlur = r * 0.05
+    dome(capR * 0.46)
+    g.restore()
+    g.strokeStyle = 'rgba(0,0,0,0.15)'
+    g.lineWidth = Math.max(0.5, r * 0.012)
+    circle(capR * 0.46)
+    g.stroke()
+    g.fillStyle = mix(cap, '#ffffff', 0.4)
+    circle(capR * 0.2)
+    g.fill()
+  } else {
+    dome(capR * 0.84)
+    // Aristas del cono
+    g.strokeStyle = 'rgba(0,0,0,0.08)'
+    g.lineWidth = Math.max(0.5, r * 0.01)
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2
+      g.beginPath()
+      g.moveTo(Math.cos(a) * capR * 0.15, Math.sin(a) * capR * 0.15)
+      g.lineTo(Math.cos(a) * capR * 0.84, Math.sin(a) * capR * 0.84)
+      g.stroke()
+    }
+    // Punta (la boquilla larga de Monument se ve como un anillo más)
+    if (capStyle === 'nozzle') {
+      g.fillStyle = mix(cap, '#ffffff', 0.18)
+      circle(capR * 0.3)
+      g.fill()
+      g.strokeStyle = 'rgba(255,255,255,0.18)'
+      g.stroke()
+    }
+    g.fillStyle = mix(cap, '#ffffff', 0.3)
+    circle(capR * 0.14)
+    g.fill()
+    g.strokeStyle = 'rgba(0,0,0,0.2)'
+    g.stroke()
+  }
 
   // Marca de gama
   g.fillStyle = rangeAccent(p)
