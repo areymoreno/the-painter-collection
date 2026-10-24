@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Painter Collection</title>
+    <meta name="description" content="Explora miles de pinturas y pinceles de miniaturas de 12 marcas, encuentra equivalencias entre ellas y lleva el control de tu colección." />
+    <meta name="theme-color" content="#15130f" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Vista previa al compartir (WhatsApp, redes, Slack…) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="The Painter Collection" />
+    <meta property="og:title" content="The Painter Collection" />
+    <meta property="og:description" content="Miles de pinturas y pinceles de miniaturas, equivalencias entre marcas y tu colección personal." />
+    <meta property="og:image" content="/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="es_ES" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <canvas id="grid"></canvas>
+
+    <header class="hud">
+      <h1 class="logo">
+        <img src="/images/the-painter-collection-claro.png" alt="The Painter Collection" width="1938" height="912" />
+      </h1>
+      <div class="controls">
+        <div class="controls-row">
+          <div id="mode" class="segmented" role="group" aria-label="Catálogo">
+            <button data-mode="paints">Pinturas</button>
+            <button data-mode="brushes">Pinceles</button>
+          </div>
+          <div class="search-wrap">
+            <input id="search" type="search" placeholder="Buscar pintura…" autocomplete="off"
+              role="combobox" aria-expanded="false" aria-controls="results" aria-autocomplete="list" />
+            <ul id="results" class="results" role="listbox" hidden></ul>
+          </div>
+          <select id="brand" aria-label="Marca"></select>
+          <select id="owned" aria-label="Colección"></select>
+          <select id="sort" aria-label="Ordenar"></select>
+        </div>
+        <div id="ranges" class="chips"></div>
+      </div>
+    </header>
+
+    <div class="hint">Arrastra, usa la rueda o las flechas para moverte · Ctrl/⌘ + rueda para zoom · Clic para verlo en 3D · En móvil, mantén pulsado para ver el nombre</div>
+
+    <div id="tooltip" class="tooltip" hidden></div>
+    <div id="empty" class="empty" hidden></div>
+
+    <div id="modal" class="modal" hidden>
+      <div class="modal-backdrop" data-close></div>
+      <div id="modal-panel" class="modal-panel">
+        <button class="close" data-close aria-label="Cerrar">×</button>
+        <aside class="pot-info">
+          <span id="info-range" class="range-tag"></span>
+          <h2 id="info-name"></h2>
+          <code id="info-hex"></code>
+          <section id="equivalents" class="equivalents" hidden>
+            <h3>Equivalencias en otras marcas</h3>
+            <ul></ul>
+          </section>
+        </aside>
+        <div class="actions">
+          <button id="btn-prev" aria-label="Anterior">←</button>
+          <button id="btn-next" aria-label="Siguiente">→</button>
+          <button id="btn-own" class="toggle own">✓ Lo tengo</button>
+          <button id="btn-wish" class="toggle wish">♥ Lo quiero</button>
+          <button id="btn-link">Copiar enlace</button>
+        </div>
+        <div id="pot-view" class="pot-view"></div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
