@@ -4,6 +4,7 @@ import { BRUSH_BRANDS, HAIR_LABEL, type Item, brushesOf, isBrush } from './brush
 import { loadIndex } from './catalog'
 import { type StatusFilter, itemKey, itemSlug, matchesFilter, onCollectionChange, statusOf } from './collection'
 import { currentItem, closeDetail, initDetail, isDetailOpen, openDetail, updateButtons } from './detail'
+import { showChangelogIfNeeded } from './changelog'
 import { $, esc } from './dom'
 import { InfiniteGrid } from './grid'
 import { type Mode, parseRoute } from './links'
@@ -348,6 +349,7 @@ if (!(await handleRoute())) {
   await setMode(saved('mode', 'paints') === 'brushes' ? 'brushes' : 'paints')
 }
 loadIndex() // precarga en segundo plano para paletas y equivalencias
+showChangelogIfNeeded()
 
 // ---------- Uso sin conexión ----------
 
