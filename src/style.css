@@ -1538,9 +1538,23 @@ div.item-row:hover {
   opacity: 0.85;
 }
 
-.equivalents .link-btn {
-  margin-top: 8px;
+/* Enlace bajo las equivalencias (no hereda el estilo de fila de los botones de la lista) */
+.equivalents button.link-btn {
+  display: inline-block;
+  width: auto;
+  margin-top: 10px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
   color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.equivalents button.link-btn:hover {
+  background: none;
+  opacity: 1;
 }
 
 .info-note {
