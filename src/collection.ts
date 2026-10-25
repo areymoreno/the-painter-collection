@@ -3,8 +3,12 @@ import { loadJson, storeJson } from './storage'
 
 // Colección personal: qué pinturas y pinceles tienes o quieres. Se guarda en el navegador.
 
-export type Status = 'own' | 'wish'
+/** «low»: la tienes pero se está acabando (cuenta como tenerla). */
+export type Status = 'own' | 'wish' | 'low'
 export type StatusFilter = 'all' | Status | 'missing'
+
+/** La tienes (aunque se esté acabando). */
+export const isOwned = (s: Status | undefined) => s === 'own' || s === 'low'
 
 const STORAGE_KEY = 'collection'
 
@@ -57,8 +61,8 @@ export function mergeCollection(incoming: Record<string, Status>, replace = fals
   if (replace) for (const k of Object.keys(state)) delete state[k]
   let n = 0
   for (const [k, v] of Object.entries(incoming)) {
-    if (v !== 'own' && v !== 'wish') continue
-    if (state[k] === 'own' && v === 'wish') continue
+    if (v !== 'own' && v !== 'wish' && v !== 'low') continue
+    if (isOwned(state[k]) && v === 'wish') continue
     if (state[k] !== v) n++
     state[k] = v
   }
@@ -69,7 +73,8 @@ export function mergeCollection(incoming: Record<string, Status>, replace = fals
 /** Activa el estado indicado o lo quita si ya estaba puesto. Devuelve el nuevo estado. */
 export function toggleStatus(it: Item, s: Status): Status | undefined {
   const key = itemKey(it)
-  if (state[key] === s) delete state[key]
+  if (s === 'low') state[key] = state[key] === 'low' ? 'own' : 'low'
+  else if (state[key] === s || (s === 'own' && state[key] === 'low')) delete state[key]
   else state[key] = s
   save()
   return state[key]
@@ -78,5 +83,7 @@ export function toggleStatus(it: Item, s: Status): Status | undefined {
 export function matchesFilter(it: Item, f: StatusFilter): boolean {
   if (f === 'all') return true
   const s = statusOf(it)
-  return f === 'missing' ? s !== 'own' : s === f
+  if (f === 'missing') return !isOwned(s)
+  if (f === 'own') return isOwned(s)
+  return s === f
 }

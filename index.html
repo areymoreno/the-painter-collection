@@ -45,23 +45,32 @@
           <select id="brand" aria-label="Marca"></select>
           <select id="owned" aria-label="Colección"></select>
           <select id="sort" aria-label="Ordenar"></select>
-          <div class="tools" role="toolbar" aria-label="Herramientas">
-            <button data-tool="color" title="Buscar por color" aria-label="Buscar por color">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8Z"/><circle cx="7.5" cy="11" r="1.4"/><circle cx="10" cy="7" r="1.4"/><circle cx="14.5" cy="7" r="1.4"/><circle cx="17" cy="11" r="1.4"/></svg>
-            </button>
-            <button data-tool="palettes" title="Paletas" aria-label="Paletas">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
-            </button>
-            <button data-tool="compare" title="Comparar" aria-label="Comparar">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg>
-              <span id="compare-count" class="badge"></span>
-            </button>
-            <button data-tool="backup" title="Copia de seguridad" aria-label="Copia de seguridad">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg>
-            </button>
-          </div>
         </div>
         <div id="ranges" class="chips"></div>
+      </div>
+      <div class="tools" role="toolbar" aria-label="Herramientas">
+        <button data-tool="color" title="Buscar por color" aria-label="Buscar por color">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8Z"/><circle cx="7.5" cy="11" r="1.4"/><circle cx="10" cy="7" r="1.4"/><circle cx="14.5" cy="7" r="1.4"/><circle cx="17" cy="11" r="1.4"/></svg>
+        </button>
+        <button data-tool="mix" title="Mezclas" aria-label="Mezclas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="10" r="5.5"/><circle cx="15" cy="10" r="5.5"/><path d="M12 15.5V21"/></svg>
+        </button>
+        <button data-tool="scan" title="Escanear un bote" aria-label="Escanear un bote">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><rect x="9" y="7" width="6" height="10" rx="1.5"/></svg>
+        </button>
+        <button data-tool="palettes" title="Paletas" aria-label="Paletas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+        </button>
+        <button data-tool="compare" title="Comparar" aria-label="Comparar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg>
+          <span id="compare-count" class="badge"></span>
+        </button>
+        <button data-tool="stats" title="Estadísticas" aria-label="Estadísticas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>
+        </button>
+        <button data-tool="backup" title="Copia de seguridad" aria-label="Copia de seguridad">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg>
+        </button>
       </div>
     </header>
 
@@ -86,9 +95,11 @@
           <span id="info-range" class="range-tag"></span>
           <h2 id="info-name"></h2>
           <code id="info-hex"></code>
+          <p id="info-note" class="info-note" hidden></p>
           <section id="equivalents" class="equivalents" hidden>
             <h3>Equivalencias en otras marcas</h3>
             <ul></ul>
+            <button id="btn-mix" class="btn small link-btn">Buscar una mezcla con mis pinturas →</button>
           </section>
         </aside>
         <div class="actions">
@@ -96,6 +107,7 @@
           <button id="btn-next" aria-label="Siguiente">→</button>
           <button id="btn-own" class="toggle own">✓ Lo tengo</button>
           <button id="btn-wish" class="toggle wish">♥ Lo quiero</button>
+          <button id="btn-low" class="toggle low" hidden>! Se acaba</button>
           <span class="menu-wrap">
             <button id="btn-palette">+ Paleta</button>
             <div id="palette-menu" class="menu" hidden></div>

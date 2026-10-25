@@ -1,4 +1,4 @@
-import { brandById, rangeAccent } from './brands'
+import { brandById, containerOf, rangeAccent } from './brands'
 import { HAIR_COLOR, type Brush, type Item, isBrush } from './brushes'
 import { type Paint, isMetallic, luminance } from './paints'
 
@@ -47,7 +47,7 @@ export class InfiniteGrid {
   private hover: Cell | null = null
   private hoverAnim = new Map<string, number>()
   private highlight: ((p: Item) => boolean) | null = null
-  private badge: ((p: Item) => 'own' | 'wish' | undefined) | null = null
+  private badge: ((p: Item) => 'own' | 'wish' | 'low' | undefined) | null = null
 
   private sprites = new Map<Item, HTMLCanvasElement>()
   private spriteRadius = 0
@@ -73,7 +73,7 @@ export class InfiniteGrid {
   }
 
   /** Marca en la esquina de cada tapón (lo tengo / lo quiero). */
-  setBadge(fn: ((p: Item) => 'own' | 'wish' | undefined) | null) {
+  setBadge(fn: ((p: Item) => 'own' | 'wish' | 'low' | undefined) | null) {
     this.badge = fn
     this.dirty = true
   }
@@ -428,12 +428,12 @@ export class InfiniteGrid {
     this.ctx.globalAlpha = 1
   }
 
-  private drawBadge(status: 'own' | 'wish', x: number, y: number, br: number) {
+  private drawBadge(status: 'own' | 'wish' | 'low', x: number, y: number, br: number) {
     const g = this.ctx
     g.save()
     g.shadowColor = 'rgba(0,0,0,0.5)'
     g.shadowBlur = br * 0.6
-    g.fillStyle = status === 'own' ? '#2bb673' : '#f0a92e'
+    g.fillStyle = status === 'own' ? '#2bb673' : status === 'low' ? '#e8590c' : '#f0a92e'
     g.beginPath()
     g.arc(x, y, br, 0, Math.PI * 2)
     g.fill()
@@ -444,7 +444,13 @@ export class InfiniteGrid {
     g.lineCap = 'round'
     g.lineJoin = 'round'
     g.beginPath()
-    if (status === 'own') {
+    if (status === 'low') {
+      // !
+      g.fillRect(x - br * 0.11, y - br * 0.55, br * 0.22, br * 0.62)
+      g.beginPath()
+      g.arc(x, y + br * 0.42, br * 0.13, 0, Math.PI * 2)
+      g.fill()
+    } else if (status === 'own') {
       // ✓
       g.moveTo(x - br * 0.45, y + br * 0.02)
       g.lineTo(x - br * 0.12, y + br * 0.36)
@@ -475,7 +481,8 @@ const SPRITE_PAD = 1.35
 
 export function renderSprite(p: Item, r: number): HTMLCanvasElement {
   if (isBrush(p)) return renderBrushTip(p, r)
-  const container = brandById(p.brand).container
+  const container = containerOf(p)
+  if (container === 'spray') return renderSprayTop(p, r)
   if (container === 'jar') return renderScrewCap(p, r)
   if (container === 'tin') return renderTinLid(p, r)
   return container === 'dropper' ? renderDropperCap(p, r) : renderCap(p, r)
@@ -1035,6 +1042,67 @@ export function renderTinLid(p: Paint, r: number): HTMLCanvasElement {
     g.fillStyle = 'rgba(30,30,30,0.75)'
     g.font = `700 ${r * 0.09}px Inter, system-ui, sans-serif`
     arcText(g, `REVELL · ${p.range}`.toUpperCase(), r * 0.71, true)
+  }
+  return cv
+}
+
+/** Bote de spray visto desde arriba: borde metálico, tapa del color y difusor. */
+export function renderSprayTop(p: Paint, r: number): HTMLCanvasElement {
+  const { cv, g, circle } = spriteCanvas(r)
+  const metal = g.createConicGradient(0.3, 0, 0)
+  for (let i = 0; i <= 8; i++) metal.addColorStop(i / 8, i % 2 ? '#e9ebee' : '#8d9298')
+  g.fillStyle = metal
+  circle(r)
+  g.fill()
+  // Citadel: tapa negra con el color en el hombro del bote; el resto, tapa del color
+  const citadel = p.brand === 'citadel'
+  const capR = citadel ? r * 0.72 : r * 0.84
+  if (citadel) {
+    g.fillStyle = p.hex
+    circle(r * 0.88)
+    g.fill()
+  }
+  const capColor = citadel ? '#1a1a1a' : p.hex
+  const cap = g.createRadialGradient(-capR * 0.3, -capR * 0.35, capR * 0.1, 0, 0, capR)
+  cap.addColorStop(0, mix(capColor, '#ffffff', 0.35))
+  cap.addColorStop(0.7, capColor)
+  cap.addColorStop(1, mix(capColor, '#000000', 0.35))
+  g.save()
+  g.shadowColor = 'rgba(0,0,0,0.4)'
+  g.shadowBlur = r * 0.06
+  g.fillStyle = cap
+  circle(capR)
+  g.fill()
+  g.restore()
+  // Difusor
+  g.fillStyle = '#f2f2ef'
+  g.beginPath()
+  g.roundRect(-r * 0.14, -r * 0.5, r * 0.28, r * 0.34, r * 0.06)
+  g.fill()
+  g.fillStyle = '#222'
+  circle(r * 0.04)
+  g.translate(0, -r * 0.42)
+  g.fill()
+  g.translate(0, r * 0.42)
+
+  rangeDot(g, p, r)
+  if (r >= 26) {
+    g.fillStyle = !citadel && luminance(p.hex) > 0.4 ? 'rgba(20,19,18,0.9)' : 'rgba(255,255,255,0.95)'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    let fs = r * 0.14
+    g.font = `800 ${fs}px Inter, system-ui, sans-serif`
+    let lines = wrap(g, p.name.toUpperCase(), r * 1.2)
+    while (lines.length > 2 && fs > r * 0.08) {
+      fs *= 0.9
+      g.font = `800 ${fs}px Inter, system-ui, sans-serif`
+      lines = wrap(g, p.name.toUpperCase(), r * 1.2)
+    }
+    lines.forEach((l, i) => g.fillText(l, 0, r * 0.18 + i * fs * 1.1))
+    g.font = `700 ${r * 0.09}px Inter, system-ui, sans-serif`
+    g.globalAlpha = 0.75
+    g.fillText('SPRAY', 0, r * 0.58)
+    g.globalAlpha = 1
   }
   return cv
 }

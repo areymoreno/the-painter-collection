@@ -5,21 +5,20 @@ const r = (id: string) => ({ id, date: id, items: [] })
 const LIST = [r('c'), r('b'), r('a')] // de más reciente a más antigua
 
 describe('aviso de novedades', () => {
-  it('en la primera visita muestra la última versión', () => {
-    expect(pendingReleases(null, false, LIST)).toEqual([LIST[0]])
+  it('en la primera visita no hay novedades (sale la bienvenida)', () => {
+    expect(pendingReleases(null, false, LIST)).toEqual([])
   })
 
   it('no muestra nada si está desactivado', () => {
-    expect(pendingReleases(null, true, LIST)).toEqual([])
     expect(pendingReleases('a', true, LIST)).toEqual([])
   })
 
-  it('muestra todo lo posterior a lo último visto', () => {
+  it('muestra solo lo posterior a lo último visto', () => {
     expect(pendingReleases('a', false, LIST)).toEqual([LIST[0], LIST[1]])
   })
 
-  it('aunque ya se haya visto todo, vuelve a mostrar la última versión', () => {
-    expect(pendingReleases('c', false, LIST)).toEqual([LIST[0]])
+  it('si ya se ha visto todo, no muestra nada', () => {
+    expect(pendingReleases('c', false, LIST)).toEqual([])
   })
 
   it('si lo visto ya no existe, muestra todo', () => {

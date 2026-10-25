@@ -47,7 +47,7 @@ export function initSearchBox({ input, results, items, onHighlight, onFocus, onP
       const st = statusOf(it)
       li.innerHTML = `
         <span class="sw" style="background:${color}"></span>
-        <span class="nm">${esc(it.name)}${st ? `<span class="st">${st === 'own' ? '✓' : '♥'}</span>` : ''}</span>
+        <span class="nm">${esc(it.name)}${st ? `<span class="st">${st === 'wish' ? '♥' : st === 'low' ? '!' : '✓'}</span>` : ''}</span>
         <span class="meta">${esc(it.range)}${isBrush(it) ? ` · ${esc(it.size)}` : it.code ? ` · ${esc(it.code)}` : ''}</span>`
       // mousedown para que el input no pierda el foco antes del clic
       li.addEventListener('mousedown', (e) => {

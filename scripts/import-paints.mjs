@@ -29,6 +29,7 @@ const BRANDS = {
       'Model Air': 'Model Air',
       'Game Air': 'Game Air',
       'Panzer Aces': 'Panzer Aces',
+      'Surface Primer': 'Primer',
     },
   },
   ak: {
@@ -42,6 +43,7 @@ const BRANDS = {
       'Intense (3rd Gen)': 'Intense',
       'Ink (3rd Gen)': 'Ink',
       'Pastel (3rd Gen)': 'Pastel',
+      'Primer (3rd Gen)': 'Primer',
     },
   },
   armypainter: {
@@ -51,6 +53,7 @@ const BRANDS = {
       'Warpaints Fanatic Wash': 'Fanatic Wash',
       'Speedpaint Set 2.0': 'Speedpaint 2.0',
       'Warpaints Air': 'Warpaints Air',
+      'Warpaints Primer': 'Primer (spray)',
     },
   },
   scale75: { file: 'Scale75.md', sets: null },
@@ -69,6 +72,7 @@ const BRANDS = {
       'Monument Pro Acrylic Paints': 'Pro Acryl',
       'Monument Pro Signature Series': 'Signature Series',
       'Monument Pro Acrylic Wash': 'Wash',
+      'Monument Pro Acrylic Primer': 'Primer',
     },
     // Colaboración con Creature Caster
     extra: [
@@ -80,7 +84,7 @@ const BRANDS = {
   },
   mig: {
     file: 'Mig.md',
-    sets: { Acrylics: 'Acrylic', Washes: 'Wash' },
+    sets: { Acrylics: 'Acrylic', Washes: 'Wash', Primers: 'Primer' },
   },
   akrc: {
     file: 'AKRC.md',
@@ -142,7 +146,7 @@ const BRANDS = {
     },
   },
   italeri: { file: 'Italeri.md', sets: { 'Italeri Acrylic Paint': 'Acrylic' } },
-  mission: { file: 'MissionModels.md', sets: { 'Mission Models': 'Acrylic' } },
+  mission: { file: 'MissionModels.md', sets: { 'Mission Models': 'Acrylic', 'Mission Models Primer': 'Primer' } },
   twothincoats: {
     file: 'Duncan.md',
     sets: { 'Wave 1': 'Wave 1', 'Wave 2': 'Wave 2', 'Wave 3': 'Wave 3' },

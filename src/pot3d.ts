@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { type Brand, brandById, rangeAccent } from './brands'
+import { type Brand, brandById, containerOf, rangeAccent } from './brands'
 import { type Brush, HAIR_COLOR, type Item, brushBrandById, isBrush } from './brushes'
 import { type Paint, hexToHsl, isMetallic, isWash, luminance } from './paints'
 
@@ -538,6 +538,55 @@ export class PotViewer {
     return capY + j.capH
   }
 
+  // ---------- Bote de spray (imprimaciones) ----------
+
+  private buildSpray(): number {
+    const R = 1.0
+    const H = 4.6
+    // El cuerpo es del color del spray (se ajusta en showPaint)
+    const metal = this.ferruleMat
+    const body = new THREE.Mesh(
+      new THREE.LatheGeometry(
+        v2([
+          [0, 0.05],
+          [R - 0.06, 0],
+          [R, 0.08],
+          [R, H],
+          ...arc(R - 0.35, H, 0.35, 0, Math.PI / 2, 8),
+          [0.45, H + 0.42],
+          [0.45, H + 0.5],
+        ]),
+        96,
+      ),
+      metal,
+    )
+    this.pot.add(body)
+    const label = new THREE.Mesh(
+      new THREE.CylinderGeometry(R + 0.006, R + 0.006, H - 0.3, 96, 1, true, -Math.PI, Math.PI * 2),
+      this.paperMat,
+    )
+    label.position.y = 0.15 + (H - 0.3) / 2
+    this.pot.add(label)
+    // Tapa del color de la pintura
+    this.opener.position.y = H - 0.05
+    this.pot.add(this.opener)
+    const cap = new THREE.Mesh(
+      new THREE.LatheGeometry(
+        v2([
+          [R - 0.02, 0],
+          [R + 0.02, 0.05],
+          [R - 0.02, 1.2],
+          ...arc(R - 0.32, 1.2, 0.3, 0, Math.PI / 2, 6),
+          [0, 1.5],
+        ]),
+        96,
+      ),
+      this.plasticMat,
+    )
+    this.opener.add(cap)
+    return H + 1.45
+  }
+
   // ---------- Lata metálica (Revell Email Color) ----------
 
   private buildTin(): number {
@@ -545,6 +594,8 @@ export class PotViewer {
     const H = 1.25
     const metal = this.ferruleMat
     metal.color.set('#c9ccd0')
+    metal.metalness = 1
+    metal.roughness = 0.22
     const body = new THREE.Mesh(
       new THREE.LatheGeometry(
         v2([
@@ -607,41 +658,54 @@ export class PotViewer {
     this.paintMat.transparent = isWash(p)
     this.paintMat.opacity = isWash(p) ? 0.9 : 1
 
+    const container = containerOf(p)
     // Plástico de la tapa/tapón según la marca
     const dark = luminance(brand.cap) < 0.1
     // Las Tone Pro llevan la tapa de plástico esmerilado más claro y translúcido
     const tonePro = p.brand === 'citadel' && p.range === 'Tone Pro'
     this.plasticMat.color.set(tonePro ? '#c3c6ca' : brand.cap)
-    this.plasticMat.transmission = brand.container === 'pot' && !dark ? (tonePro ? 0.55 : 0.35) : 0.05
-    this.plasticMat.roughness = brand.container === 'pot' ? 0.5 : 0.4
+    this.plasticMat.transmission = container === 'pot' && !dark ? (tonePro ? 0.55 : 0.35) : 0.05
+    this.plasticMat.roughness = container === 'pot' ? 0.5 : 0.4
 
     const extra = extraHeight(p)
     const style: DropperStyle = DROPPER_STYLE[p.brand] ?? 'generic'
-    const key = `${brand.container}|${extra}|${style}|${p.brand}`
+    const key = `${container}|${extra}|${style}|${p.brand}`
     if (key !== this.builtKey) {
       this.builtKey = key
       this.clearPot()
       this.pot.rotation.z = 0
       const height =
-        brand.container === 'pot'
+        container === 'spray'
+          ? this.buildSpray()
+          : container === 'pot'
           ? this.buildJar(extra)
-          : brand.container === 'jar'
+          : container === 'jar'
             ? this.buildScrewJar(SCREW_JARS[p.brand] ?? SCREW_JARS.tamiya)
-            : brand.container === 'tin'
+            : container === 'tin'
               ? this.buildTin()
               : this.buildDropper(style)
       this.frame(height)
     }
 
-    if (brand.container === 'pot' && POT_LABELS[p.brand]) {
+    if (container === 'pot' && POT_LABELS[p.brand]) {
       this.labelMat.map?.dispose()
       this.labelMat.map = POT_LABELS[p.brand]!(p)
       this.labelMat.needsUpdate = true
-    } else if (brand.container === 'pot') {
+    } else if (container === 'pot') {
       this.labelMat.map?.dispose()
       this.labelMat.map =
         p.brand !== 'citadel' ? printedLabel(p, brand) : p.range === 'Tone Pro' ? toneProLabel(p) : warhammerLabel(p)
       this.labelMat.needsUpdate = true
+    } else if (container === 'spray') {
+      this.paperMat.map?.dispose()
+      this.paperMat.map = p.brand === 'citadel' ? citadelSprayLabel(p) : sprayLabel(p, brand)
+      this.paperMat.needsUpdate = true
+      // Bote pintado del color del spray, con brillo de esmalte
+      this.ferruleMat.color.set(p.hex)
+      this.ferruleMat.metalness = 0.25
+      this.ferruleMat.roughness = 0.3
+      // Citadel: tapa negra; el resto, del color de la pintura
+      this.plasticMat.color.set(p.brand === 'citadel' ? '#141414' : p.hex)
     } else {
       this.paperMat.map?.dispose()
       this.paperMat.map =
@@ -666,6 +730,8 @@ export class PotViewer {
     this.resize() // el visor cambia de tamaño para los pinceles
     this.handleMat.color.set(b.handle)
     this.ferruleMat.color.set(b.ferrule)
+    this.ferruleMat.metalness = 1
+    this.ferruleMat.roughness = 0.22
     this.hairMat.color.set(HAIR_COLOR[b.hair])
 
     this.builtKey = `brush|${b.brand}|${b.id}`
@@ -2348,4 +2414,59 @@ Object.assign(BRAND_LABELS, {
 const POT_LABELS: Partial<Record<string, (p: Paint) => THREE.CanvasTexture>> = {
   foundry: foundryLabel,
   coatdarms: coatDArmsLabel,
+}
+
+/** Etiqueta de bote de spray: banda oscura con la marca, «SPRAY» y el color. */
+function sprayLabel(p: Paint, brand: Brand): THREE.CanvasTexture {
+  const { cv, g, W, H, cx } = canvasFor(1.0, 4.3)
+  g.fillStyle = p.hex
+  g.fillRect(0, 0, W, H)
+  const ink = luminance(p.hex) > 0.45 ? '#141414' : '#ffffff'
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  g.fillStyle = ink
+  fitFont(g, brand.name.toUpperCase(), 900, 120, 700, 50)
+  g.fillText(brand.name.toUpperCase(), cx, H * 0.12)
+  g.fillStyle = '#d9a441'
+  g.fillRect(cx - 200, H * 0.15, 400, 10)
+  g.fillStyle = ink
+  g.font = `900 220px ${CONDENSED}`
+  g.fillText(/primer/i.test(p.range) || p.brand === 'citadel' ? 'SPRAY' : 'SPRAY', cx, H * 0.32)
+  nameLines(g, p.name.toUpperCase(), cx, H * 0.45, 680, (n) => `800 ${n}px ${CONDENSED}`, 110)
+  g.font = `700 60px ${CONDENSED}`
+  g.globalAlpha = 0.75
+  g.fillText(/varnish|barniz/i.test(p.name) ? 'BARNIZ · 400 ml' : 'IMPRIMACIÓN · 400 ml', cx, H * 0.56)
+  g.globalAlpha = 1
+  g.font = `800 70px ${CONDENSED}`
+  g.fillText('AGITAR ANTES DE USAR', cx, H * 0.79)
+  return texture(cv)
+}
+
+/** Spray Citadel: etiqueta del color del spray con «CITADEL COLOUR», el nombre y los avisos. */
+function citadelSprayLabel(p: Paint): THREE.CanvasTexture {
+  const { cv, g, W, H, cx } = canvasFor(1.0, 4.3)
+  g.fillStyle = p.hex
+  g.fillRect(0, 0, W, H)
+  const ink = luminance(p.hex) > 0.45 ? '#141414' : '#f4f1ea'
+  const top = H * 0.2
+
+  g.textAlign = 'center'
+  g.textBaseline = 'alphabetic'
+  g.fillStyle = ink
+  g.font = `400 120px "Trajan Pro", ${SERIF}`
+  g.fillText('CITADEL', cx, top + 150)
+  g.save()
+  g.translate(cx, top + 330)
+  g.scale(1, 1.2)
+  fitFont(g, 'COLOUR', 900, 190, 720, 80)
+  g.fillText('COLOUR', 0, 0)
+  g.restore()
+  nameLines(g, p.name.toUpperCase(), cx, top + 560, 620, (n) => `900 ${n}px ${CONDENSED}`, 150)
+
+  g.font = `800 60px ${CONDENSED}`
+  g.fillText('DANGER!', cx, H * 0.79)
+  g.font = `700 46px ${CONDENSED}`
+  g.fillText('EXTREMELY FLAMMABLE LIQUID AND VAPOR.', cx, H * 0.83)
+  g.fillText('CONTENTS UNDER PRESSURE.', cx, H * 0.865)
+  return texture(cv)
 }

@@ -1,10 +1,10 @@
 import { brandById } from './brands'
 import { HAIR_LABEL, SHAPE_LABEL, type Item, brushBrandById, isBrush } from './brushes'
 import { loadAllPaints } from './catalog'
-import { itemKey, statusOf, toggleStatus } from './collection'
+import { isOwned, itemKey, statusOf, toggleStatus } from './collection'
 import { $, el, esc } from './dom'
-import { equivalents, similarity } from './match'
-import { luminance } from './paints'
+import { deltaE2000, equivalents, similarity } from './match'
+import { type Paint, isDiscontinued, luminance } from './paints'
 import { allPalettes, createPalette, togglePaletteItem } from './palettes'
 import { inCompare, toggleCompare } from './panels/comparePanel'
 import type { PotViewer } from './pot3d'
@@ -14,6 +14,8 @@ import type { PotViewer } from './pot3d'
 interface DetailHooks {
   step(dir: number): void
   openKey(key: string): void
+  /** Abre el panel de mezclas con esta pintura como objetivo */
+  mixFor(p: Paint): void
   onClose(): void
 }
 
@@ -21,6 +23,7 @@ const modal = $('modal')
 const panel = $('modal-panel')
 const btnOwn = $<HTMLButtonElement>('btn-own')
 const btnWish = $<HTMLButtonElement>('btn-wish')
+const btnLow = $<HTMLButtonElement>('btn-low')
 const btnLink = $<HTMLButtonElement>('btn-link')
 const btnCompare = $<HTMLButtonElement>('btn-compare')
 const btnPalette = $<HTMLButtonElement>('btn-palette')
@@ -45,6 +48,8 @@ export function initDetail(h: DetailHooks) {
   $('btn-next').addEventListener('click', () => hooks.step(1))
   btnOwn.addEventListener('click', () => current && toggleStatus(current, 'own'))
   btnWish.addEventListener('click', () => current && toggleStatus(current, 'wish'))
+  btnLow.addEventListener('click', () => current && toggleStatus(current, 'low'))
+  $('btn-mix').addEventListener('click', () => current && !isBrush(current) && hooks.mixFor(current))
   btnCompare.addEventListener('click', () => {
     if (!current) return
     toggleCompare(current)
@@ -70,8 +75,10 @@ export function initDetail(h: DetailHooks) {
 
 export function updateButtons() {
   const s = current && statusOf(current)
-  btnOwn.classList.toggle('on', s === 'own')
+  btnOwn.classList.toggle('on', isOwned(s ?? undefined))
   btnWish.classList.toggle('on', s === 'wish')
+  btnLow.hidden = !isOwned(s ?? undefined)
+  btnLow.classList.toggle('on', s === 'low')
   const cmp = !!current && inCompare(current)
   btnCompare.classList.toggle('on', cmp)
   btnCompare.textContent = cmp ? '⇄ En comparación' : '⇄ Comparar'
@@ -135,14 +142,34 @@ export async function openDetail(it: Item) {
 async function showEquivalents(it: Item) {
   const list = eqSection.querySelector('ul')!
   if (isBrush(it)) {
+    $('info-note').hidden = true
     eqSection.hidden = true
     return
   }
   const catalog = await loadAllPaints()
   if (current !== it) return
   list.replaceChildren()
-  for (const { paint: p, dE } of equivalents(it, catalog, 5)) {
-    const owned = statusOf(p) === 'own'
+  // Descatalogada: su sustituta más parecida de la gama actual de la misma marca
+  const note = $('info-note')
+  note.hidden = !isDiscontinued(it)
+  if (isDiscontinued(it)) {
+    // Lavados antiguos → Shade; el resto → Base o Layer
+    const ranges = /wash/i.test(it.name) ? ['Shade'] : ['Base', 'Layer']
+    const current = catalog.filter((p) => p.brand === it.brand && ranges.includes(p.range))
+    const best = current
+      .map((p) => ({ p, dE: deltaE2000(it.hex, p.hex) }))
+      .sort((a, b) => a.dE - b.dE)[0]
+    note.replaceChildren('Descatalogada. ')
+    if (best) {
+      const link = el('button', { className: 'link-btn', textContent: `Sustituta actual: ${best.p.name} (${best.p.range})` })
+      link.addEventListener('click', () => hooks.openKey(itemKey(best.p)))
+      note.append(link)
+    }
+  }
+
+  const pool = catalog.filter((p) => !isDiscontinued(p))
+  for (const { paint: p, dE } of equivalents(it, pool, 5)) {
+    const owned = isOwned(statusOf(p))
     const b = el('button', { title: `Diferencia de color ΔE ${dE.toFixed(1)}` })
     b.innerHTML = `
       <span class="sw" style="background:${p.hex}"></span>

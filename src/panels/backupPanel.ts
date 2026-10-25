@@ -13,8 +13,8 @@ export const backupPanel: Panel = {
   title: 'Copia de seguridad',
   render(body) {
     const snap = Object.values(collectionSnapshot())
-    const own = snap.filter((s) => s === 'own').length
-    const wish = snap.length - own
+    const own = snap.filter((s) => s === 'own' || s === 'low').length
+    const wish = snap.filter((s) => s === 'wish').length
     body.append(
       el('p', {
         className: 'panel-help',

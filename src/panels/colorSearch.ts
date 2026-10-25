@@ -1,10 +1,12 @@
-import { brandById, BRANDS } from '../brands'
+import { BRANDS } from '../brands'
 import { loadAllPaints } from '../catalog'
-import { statusOf } from '../collection'
-import { el, esc } from '../dom'
+import { isOwned, statusOf } from '../collection'
+import { el } from '../dom'
 import { deltaE2000, similarity } from '../match'
-import type { Paint } from '../paints'
+import { bestMixes } from '../mixing'
+import { type Paint, isDiscontinued } from '../paints'
 import { type Panel, rerender } from './drawer'
+import { mixRow, paintRow } from './rows'
 
 // Buscar por color: eliges un color (o lo tomas de una foto) y salen las pinturas más parecidas.
 
@@ -12,7 +14,6 @@ let color = '#9a1115'
 let image: HTMLImageElement | null = null
 let picked: { x: number; y: number } | null = null
 let brandFilter = ''
-let onlyOwned = false
 
 export function setSearchColor(hex: string) {
   color = hex
@@ -109,12 +110,7 @@ export function colorSearchPanel(openPaint: (p: Paint) => void): Panel {
         brandFilter = brandSel.value
         renderResults()
       })
-      const owned = el('input', { type: 'checkbox', checked: onlyOwned })
-      owned.addEventListener('change', () => {
-        onlyOwned = owned.checked
-        renderResults()
-      })
-      body.append(el('div', { className: 'cs-row' }, brandSel, el('label', { className: 'cs-check' }, owned, ' Solo las que tengo')))
+      body.append(el('div', { className: 'cs-row' }, brandSel))
 
       const list = el('ul', { className: 'item-list' })
       body.append(list)
@@ -123,30 +119,32 @@ export function colorSearchPanel(openPaint: (p: Paint) => void): Panel {
         const target = color
         const all = await loadAllPaints()
         if (target !== color) return
-        const pool = all.filter((p) => (!brandFilter || p.brand === brandFilter) && (!onlyOwned || statusOf(p) === 'own'))
-        const best = pool
-          .map((p) => ({ p, dE: deltaE2000(target, p.hex) }))
-          .sort((a, b) => a.dE - b.dE)
-          .slice(0, 15)
+        const pool = all.filter((p) => (!brandFilter || p.brand === brandFilter) && !isDiscontinued(p))
+        const scored = pool.map((p) => ({ p, dE: deltaE2000(target, p.hex) })).sort((a, b) => a.dE - b.dE)
+        const mine = scored.filter((x) => isOwned(statusOf(x.p)))
+        const others = scored.filter((x) => !isOwned(statusOf(x.p))).slice(0, 10)
         list.replaceChildren()
-        if (!best.length) {
-          list.append(el('li', { className: 'muted', textContent: onlyOwned ? 'No tienes pinturas marcadas en esta selección.' : 'Sin resultados.' }))
+
+        // 1) Lo que ya tienes, si se parece lo suficiente
+        const close = mine.filter((x) => x.dE < 12).slice(0, 4)
+        if (close.length) {
+          list.append(el('li', { className: 'list-title', textContent: 'Con lo que tienes' }))
+          for (const { p, dE } of close) list.append(paintRow(p, similarity(dE), () => openPaint(p), `ΔE ${dE.toFixed(1)}`))
         }
-        for (const { p, dE } of best) list.append(paintRow(p, similarity(dE), () => openPaint(p), `ΔE ${dE.toFixed(1)}`))
+        // 2) Una mezcla con tus pinturas, si mejora a lo que tienes
+        const ownedAll = all.filter((p) => isOwned(statusOf(p)) && !isDiscontinued(p))
+        if (ownedAll.length >= 2 && (!close.length || close[0].dE > 3)) {
+          const mixes = bestMixes(target, ownedAll, 3).filter((m) => !close.length || m.dE < close[0].dE)
+          if (mixes.length) {
+            list.append(el('li', { className: 'list-title', textContent: 'Mezclando lo que tienes' }))
+            for (const m of mixes) list.append(mixRow(m, openPaint))
+          }
+        }
+        // 3) Lo que tendrías que comprar
+        list.append(el('li', { className: 'list-title', textContent: close.length ? 'Para comprar' : 'Pinturas más parecidas' }))
+        for (const { p, dE } of others) list.append(paintRow(p, similarity(dE), () => openPaint(p), `ΔE ${dE.toFixed(1)}`))
       }
       renderResults()
     },
   }
-}
-
-/** Fila de pintura reutilizada por los paneles. */
-export function paintRow(p: Paint, right: string, onClick: () => void, title = ''): HTMLLIElement {
-  const own = statusOf(p) === 'own'
-  const b = el('button', { className: 'item-row', title })
-  b.innerHTML = `
-    <span class="sw" style="background:${p.hex}"></span>
-    <span class="nm">${esc(p.name)}<small>${esc(brandById(p.brand).name)} · ${esc(p.code ?? p.range)}</small></span>
-    <span class="de">${own ? '<b>✓</b> ' : ''}${esc(right)}</span>`
-  b.addEventListener('click', onClick)
-  return el('li', {}, b)
 }

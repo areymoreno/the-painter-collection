@@ -85,7 +85,7 @@ export function comparePanel(openItem: (it: Item) => void): Panel {
           sw.addEventListener('click', () => openItem(it))
           const own = statusOf(it)
           const name = el('h3', {})
-          name.innerHTML = `${esc(it.name)}${own ? ` <span class="st">${own === 'own' ? '✓' : '♥'}</span>` : ''}`
+          name.innerHTML = `${esc(it.name)}${own ? ` <span class="st">${own === 'wish' ? '♥' : own === 'low' ? '✓ (se acaba)' : '✓'}</span>` : ''}`
           const dl = el('dl', {})
           for (const [k, v] of facts(it)) dl.append(el('dt', { textContent: k }), el('dd', { textContent: v }))
           const remove = el('button', { className: 'btn small', textContent: 'Quitar' })

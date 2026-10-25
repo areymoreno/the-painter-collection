@@ -1,12 +1,14 @@
 import { type BrandId, type Paint, PAINTS, RANGE_INFO } from './paints'
 
 /** Bote con tapa abatible, cuentagotas, tarro de cristal con rosca o lata metálica */
-export type Container = 'pot' | 'dropper' | 'jar' | 'tin'
+export type Container = 'pot' | 'dropper' | 'jar' | 'tin' | 'spray'
 
 export interface Brand {
   id: BrandId
   name: string
   container: Container
+  /** Gamas que vienen en otro envase (p. ej. los sprays) */
+  rangeContainer?: Record<string, Container>
   /** Color del plástico de la tapa (pot) o del tapón (dropper) */
   cap: string
   /** Forma del tapón cuentagotas visto desde arriba: cónico, escalonado o con boquilla larga */
@@ -28,6 +30,7 @@ export const BRANDS: Brand[] = [
     name: 'Warhammer Colour',
     container: 'pot',
     cap: '#74736f',
+    rangeContainer: { Spray: 'spray' },
     load: async () => PAINTS,
   },
   {
@@ -52,6 +55,7 @@ export const BRANDS: Brand[] = [
     container: 'dropper',
     cap: '#f1f0ec',
     capStyle: 'stepped',
+    rangeContainer: { 'Primer (spray)': 'spray' },
     load: fromJson('armypainter', () => import('./data/armypainter.json')),
   },
   {
@@ -201,6 +205,12 @@ export const BRANDS: Brand[] = [
 ]
 
 export const brandById = (id: BrandId) => BRANDS.find((b) => b.id === id)!
+
+/** Envase de una pintura concreta (la gama puede cambiar el de la marca). */
+export function containerOf(p: Pick<Paint, 'brand' | 'range'>): Container {
+  const b = brandById(p.brand)
+  return b.rangeContainer?.[p.range] ?? b.container
+}
 
 const PALETTE = ['#e4572e', '#3a86ff', '#8338ec', '#ff006e', '#ffbe0b', '#06d6a0', '#8ecae6', '#b5e48c', '#f15bb5', '#fb8500', '#90a955', '#cdb4db']
 const accents = new Map<string, string>()

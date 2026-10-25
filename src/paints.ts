@@ -37,6 +37,8 @@ export type CitadelRange =
   | 'Technical'
   | 'Air'
   | 'Tone Pro'
+  | 'Spray'
+  | 'Descatalogada'
 
 export interface Paint {
   id: number
@@ -56,6 +58,8 @@ export const RANGE_INFO: Record<CitadelRange, { label: string; accent: string }>
   Technical: { label: 'Technical', accent: '#06d6a0' },
   Air: { label: 'Air', accent: '#8ecae6' },
   'Tone Pro': { label: 'Tone Pro', accent: '#b5e48c' },
+  Spray: { label: 'Spray', accent: '#adb5bd' },
+  Descatalogada: { label: 'Descatalogada', accent: '#6c757d' },
 }
 
 const RAW: Record<CitadelRange, string> = {
@@ -577,6 +581,121 @@ Blackstone Void 3:#6e7074
 Blackstone Void 4:#9b9d9f
 Blackstone Void 5:#ffffff
 `,
+  Spray: `
+Chaos Black:#000000
+Corax White:#ffffff
+Death Guard Green:#556229
+Grey Seer:#a2a5a7
+Leadbelcher:#868686
+Macragge Blue:#103e7c
+Mechanicus Standard Grey:#39484a
+Mephiston Red:#960d0a
+Munitorum Varnish:#fafafa
+Retributor Armour:#edc06a
+Wraithbone:#dbd1b2
+Zandri Dust:#988e56
+`,
+  // Gama anterior a 2012 (Foundation y lavados antiguos)
+  Descatalogada: `
+Adeptus Battlegrey:#4a4c58
+Astronomicon Grey:#93abaf
+Asurmen Blue Wash:#273e51
+Baal Red Wash:#630808
+Bad Moon Yellow:#fff200
+Badab Black Wash:#000000
+Beaten Copper:#73372d
+Bestial Brown:#7b4a39
+Bilious Green:#a9d171
+Black Ink:#000000
+Blazing Orange:#e65925
+Bleached Bone:#eed5ac
+Blood Red:#d2223e
+Boltgun Metal:#888789
+Brazen Brass:#966747
+Bronzed Flesh:#ec9a36
+Bubonic Brown:#b89142
+Burnished Gold:#e0c068
+Calthan Brown:#7a4231
+Camo Green:#878d52
+Catachan Green:#455440
+Chainmail:#8e8c91
+Chaos Black:#001522
+Charadon Granite:#463f39
+Codex Grey:#808285
+Commando Khaki:#9a8c7b
+Dark Angels Green:#19553c
+Dark Flesh:#683b31
+Dark Green Ink:#108473
+Desert Yellow:#9c8855
+Devlan Mud Wash:#393121
+Dheneb Stone:#b8aca0
+Dwarf Bronze:#a26840
+Dwarf Flesh:#da9382
+Elf Flesh:#edae74
+Enchanted Blue:#0071b7
+Fenrys Grey:#2c4363
+Fiery Orange:#f47920
+Flesh Wash:#ce8c42
+Fortress Grey:#bcbdc0
+Ghostly Grey:#c3c6cd
+Goblin Green:#3d9353
+Golden Yellow:#ffc20e
+Graveyard Earth:#665238
+Gretchin Green:#7e6930
+Gryphonne Sepia Wash:#843910
+Hawk Turquoise:#008194
+Hormagaunt Purple:#54496b
+Ice Blue:#81d3eb
+Imperial Purple:#562f7e
+Iyanden Darksun:#ad852e
+Jade Green:#069b7d
+Khemri Brown:#73614d
+Knarloc Green:#48563c
+Kommando Khaki:#9b8c7b
+Leprous Brown:#d88e2d
+Leviathan Purple Wash:#842994
+Liche Purple:#2c2d8b
+Lightning Bolt Blue:#8bb9dd
+Macharius Solar Orange:#b94023
+Magenta Ink:#de007b
+Mechrite Red:#a82014
+Midnight Blue:#002561
+Mithril Silver:#b7bec5
+Mordian Blue:#244882
+Nauseating Blue:#412a7a
+Necron Abyss:#1a213d
+Ogryn Flesh Wash:#ce8c42
+Orkhide Shade:#26372d
+Pallid Flesh:#eec8c7
+Purple Ink:#842994
+Red Gore:#9d2b3f
+Regal Blue:#003f70
+Rotting Flesh:#b8c39e
+Scab Red:#90263d
+Scaly Green:#006063
+Scorched Brown:#5a422f
+Scorpion Green:#65b345
+Shadow Grey:#106993
+Shining Gold:#efb736
+Skull White:#ffffff
+Snakebite Leather:#8c6c40
+Snot Green:#006f45
+Space Wolves Grey:#91bfdc
+Storm Blue:#27357e
+Sunburst Yellow:#ffd400
+Tallarn Flesh:#b27b67
+Tanned Flesh:#a95c3e
+Tausept Ochre:#a06e3b
+Tentacle Pink:#dc9dc6
+Terracotta:#793721
+Tin Bitz:#473f39
+Ultramarine Blue:#0066b3
+Vermin Brown:#843910
+Vermin Fur:#904f2e
+Vile Green:#82c59c
+Vomit Brown:#ce8b3c
+Warlock Purple:#a43e8b
+`,
 }
 
 function parse(): Paint[] {
@@ -671,6 +790,9 @@ export function isMetallic(p: Paint): boolean {
   if (p.brand === 'citadel') return METALLICS.has(p.name.replace(/^Air /, ''))
   return METAL_WORDS.test(p.name) || /metal/i.test(p.range)
 }
+
+/** Pinturas que ya no se fabrican. */
+export const isDiscontinued = (p: Paint) => p.brand === 'citadel' && p.range === 'Descatalogada'
 
 /** Pinturas translúcidas (lavados, tintas, contrast/speedpaint…). */
 export function isWash(p: Paint): boolean {

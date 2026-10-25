@@ -2,7 +2,7 @@ import './style.css'
 import { BRANDS, brandById, rangeAccent } from './brands'
 import { BRUSH_BRANDS, HAIR_LABEL, type Item, brushesOf, isBrush } from './brushes'
 import { loadIndex } from './catalog'
-import { type StatusFilter, itemKey, itemSlug, matchesFilter, onCollectionChange, statusOf } from './collection'
+import { type StatusFilter, isOwned, itemKey, itemSlug, matchesFilter, onCollectionChange, statusOf } from './collection'
 import { currentItem, closeDetail, initDetail, isDetailOpen, openDetail, updateButtons } from './detail'
 import { showChangelogIfNeeded } from './changelog'
 import { $, esc } from './dom'
@@ -12,6 +12,9 @@ import { onPalettesChange } from './palettes'
 import type { BrandId } from './paints'
 import { backupPanel } from './panels/backupPanel'
 import { colorSearchPanel, setSearchColor } from './panels/colorSearch'
+import { mixPanel, setMixTarget } from './panels/mixPanel'
+import { scanPanel, stopScan } from './panels/scanPanel'
+import { statsPanel } from './panels/statsPanel'
 import { compareItems, comparePanel, onCompareChange } from './panels/comparePanel'
 import { closeDrawer, drawerPanel, onDrawerChange, openPanel, rerender } from './panels/drawer'
 import { palettesPanel, showPaletteList, showSharedPalette } from './panels/palettesPanel'
@@ -57,6 +60,11 @@ initDetail({
     grid.focus(next)
   },
   openKey: (key) => openByKey(key),
+  mixFor(p) {
+    setMixTarget(p)
+    closeDetail()
+    openPanel(panels.mix)
+  },
   onClose() {},
 })
 
@@ -104,14 +112,16 @@ const FILTER_LABEL: Record<StatusFilter, string> = {
   all: 'Todas',
   own: 'Las tengo',
   wish: 'Las quiero',
+  low: 'Se acaban',
   missing: 'Me faltan',
 }
 
 /** Actualiza las opciones con el recuento de la marca actual. */
 function updateOwnedSelect() {
-  const own = items.filter((it) => statusOf(it) === 'own').length
+  const own = items.filter((it) => isOwned(statusOf(it))).length
+  const low = items.filter((it) => statusOf(it) === 'low').length
   const wish = items.filter((it) => statusOf(it) === 'wish').length
-  const counts: Record<StatusFilter, number> = { all: items.length, own, wish, missing: items.length - own }
+  const counts: Record<StatusFilter, number> = { all: items.length, own, wish, low, missing: items.length - own }
   ownedSelect.replaceChildren()
   for (const f of Object.keys(FILTER_LABEL) as StatusFilter[]) {
     ownedSelect.add(new Option(`${FILTER_LABEL[f]} (${counts[f]})`, f))
@@ -196,6 +206,8 @@ function refresh() {
         ? 'Aún no tienes nada marcado en esta marca. Abre una y pulsa «✓ Lo tengo».'
         : statusFilter === 'wish'
           ? 'Tu lista de deseos de esta marca está vacía. Abre una y pulsa «♥ Lo quiero».'
+          : statusFilter === 'low'
+            ? 'No has marcado ninguna como «Se acaba» en esta marca.'
           : 'No hay nada con estos filtros.'
   }
   updateSummary()
@@ -220,6 +232,9 @@ const panels = {
   color: colorSearchPanel((p) => openByKey(itemKey(p))),
   palettes: palettesPanel((key) => openByKey(key)),
   compare: comparePanel((it) => openByKey(itemKey(it))),
+  mix: mixPanel((p) => openByKey(itemKey(p))),
+  scan: scanPanel((p) => openByKey(itemKey(p))),
+  stats: statsPanel,
   backup: backupPanel,
 }
 
@@ -237,6 +252,7 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-tool]')) {
 }
 
 onDrawerChange((id) => {
+  if (id !== 'scan') stopScan()
   for (const b of document.querySelectorAll<HTMLElement>('[data-tool]')) b.classList.toggle('on', b.dataset.tool === id)
   // En móvil se pliega la cabecera para dejar sitio al panel
   if (id && mobile.matches) hud.classList.add('collapsed')

@@ -1,7 +1,7 @@
 import { el } from './dom'
 import { saved, store } from './storage'
 
-// Aviso de novedades al entrar.
+// Bienvenida en la primera visita y aviso de novedades cuando hay versiones nuevas.
 // Para anunciar cambios, añade una entrada al principio de CHANGELOG con un id nuevo.
 
 type Icon =
@@ -18,6 +18,9 @@ type Icon =
   | 'swap'
   | 'phone'
   | 'label'
+  | 'mix'
+  | 'stats'
+  | 'scan'
 
 interface Item {
   icon: Icon
@@ -32,6 +35,37 @@ interface Release {
 }
 
 export const CHANGELOG: Release[] = [
+  {
+    id: '2026-10-25',
+    date: '25 de octubre de 2026',
+    items: [
+      {
+        icon: 'mix',
+        title: 'Mezclas',
+        text: 'Mira qué sale al mezclar dos pinturas o qué mezcla de las tuyas se acerca al color que buscas.',
+      },
+      {
+        icon: 'scan',
+        title: 'Escanea tus botes',
+        text: 'Enfoca la etiqueta con la cámara y márcala como «Lo tengo» de un toque.',
+      },
+      {
+        icon: 'stats',
+        title: 'Estadísticas',
+        text: 'Cuántas tienes por marca y gama, y qué colores te faltan. Marca las que se acaban y saldrán en la lista de la compra.',
+      },
+      {
+        icon: 'palette',
+        title: 'Esquemas de pintado',
+        text: 'En cada paleta indica qué va de base, sombra o luz y añade notas para repetir el ejército.',
+      },
+      {
+        icon: 'paint',
+        title: 'Imprimaciones y descatalogadas',
+        text: 'Sprays e imprimaciones de varias marcas, y la gama antigua de Citadel con su sustituta actual.',
+      },
+    ],
+  },
   {
     id: '2026-10-24',
     date: '24 de octubre de 2026',
@@ -68,16 +102,37 @@ export const CHANGELOG: Release[] = [
 const SEEN_KEY = 'changelog-seen'
 const OFF_KEY = 'changelog-off'
 
-/**
- * Novedades a mostrar: sale en cada visita hasta que se marque «No volver a mostrar».
- * Incluye todo lo que no se ha visto y, como mínimo, la última versión.
- */
+/** Novedades publicadas después de la última vez que el usuario las vio. */
 export function pendingReleases(seen: string | null, off: boolean, list: Release[] = CHANGELOG): Release[] {
-  if (off) return []
-  const i = seen ? list.findIndex((r) => r.id === seen) : 1
-  const unseen = i < 0 ? list : list.slice(0, i)
-  return unseen.length ? unseen : list.slice(0, 1)
+  // En la primera visita se muestra la bienvenida, no las novedades
+  if (off || !seen) return []
+  const i = list.findIndex((r) => r.id === seen)
+  return i < 0 ? list : list.slice(0, i)
 }
+
+/** Bienvenida de la primera visita: qué es la web y cómo se usa. */
+const WELCOME: Item[] = [
+  {
+    icon: 'paint',
+    title: 'Explora más de 6.000 pinturas',
+    text: 'Arrastra para moverte por los botes vistos desde arriba, usa la rueda o pellizca para hacer zoom y elige marca y gama arriba.',
+  },
+  {
+    icon: 'label',
+    title: 'Ábrelos en 3D',
+    text: 'Toca un bote para verlo con su etiqueta, sus equivalencias en otras marcas y mezclas para conseguir su color.',
+  },
+  {
+    icon: 'check',
+    title: 'Lleva tu colección',
+    text: 'Marca lo que tienes, lo que quieres y lo que se acaba. Se guarda en tu navegador y puedes hacer una copia.',
+  },
+  {
+    icon: 'color',
+    title: 'Herramientas',
+    text: 'Busca por color o desde una foto, escanea tus botes, crea paletas con su esquema y compara pinturas.',
+  },
+]
 
 const ICONS: Record<Icon, string> = {
   paint: '<path d="M8 3h8v3H8z"/><path d="M7 6h10l1 3v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9z"/><path d="M6 12h12"/>',
@@ -93,6 +148,9 @@ const ICONS: Record<Icon, string> = {
   swap: '<circle cx="8" cy="8" r="4"/><circle cx="16" cy="16" r="4"/><path d="M14 6h4v4M10 18H6v-4"/>',
   phone: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>',
   label: '<path d="M4 4h9l7 7-9 9-7-7z"/><circle cx="8.5" cy="8.5" r="1.5"/>',
+  mix: '<circle cx="9" cy="10" r="5.5"/><circle cx="15" cy="10" r="5.5"/><path d="M12 15.5V21"/>',
+  stats: '<path d="M5 20V11M12 20V5M19 20v-6"/>',
+  scan: '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><rect x="9" y="7" width="6" height="10" rx="1.5"/>',
 }
 
 /** Tira decorativa de tapones de pintura. */
@@ -104,12 +162,16 @@ function icon(name: Icon) {
   return span
 }
 
+const card = (it: Item) =>
+  el('li', { className: 'wn-card' }, icon(it.icon), el('div', {}, el('b', { textContent: it.title }), el('p', { textContent: it.text })))
+
 export function showChangelogIfNeeded() {
   const latest = CHANGELOG[0]?.id
   if (!latest) return
   const seen = saved(SEEN_KEY, '') || null
+  const welcome = !seen
   const pending = pendingReleases(seen, saved(OFF_KEY, '') === '1')
-  if (!pending.length) return
+  if (!welcome && !pending.length) return
 
   const logo = el('img', {
     src: `${import.meta.env.BASE_URL}images/the-painter-collection-claro.png`,
@@ -125,8 +187,9 @@ export function showChangelogIfNeeded() {
   })
 
   const never = el('input', { type: 'checkbox' })
-  const ok = el('button', { className: 'wn-ok', textContent: 'Empezar a explorar' })
+  const ok = el('button', { className: 'wn-ok', textContent: welcome ? 'Empezar' : 'Entendido' })
   const close = () => {
+    // Al cerrar se da todo por visto: solo volverá a salir cuando haya novedades nuevas
     store(SEEN_KEY, latest)
     if (never.checked) store(OFF_KEY, '1')
     overlay.classList.add('leaving')
@@ -138,18 +201,24 @@ export function showChangelogIfNeeded() {
 
   const box = el(
     'div',
-    { className: 'whatsnew', role: 'dialog', ariaLabel: 'Novedades' },
+    { className: 'whatsnew', role: 'dialog', ariaLabel: welcome ? 'Bienvenida' : 'Novedades' },
     x,
     el(
       'header',
       { className: 'wn-head' },
       logo,
-      el('h2', { textContent: seen ? 'Esto es lo que ha cambiado' : 'Bienvenido a tu colección de pinturas' }),
+      el('h2', { textContent: welcome ? 'Bienvenido a tu colección de pinturas' : 'Esto es lo que ha cambiado' }),
+      welcome
+        ? el('p', { className: 'wn-sub', textContent: 'Todas las pinturas y pinceles de miniaturas en un mismo sitio.' })
+        : el('span'),
       caps,
     ),
     el(
       'div',
       { className: 'wn-body' },
+      ...(welcome
+        ? [el('ul', { className: 'wn-grid wn-welcome' }, ...WELCOME.map(card))]
+        : []),
       ...pending.map((r) =>
         el(
           'section',
@@ -158,14 +227,19 @@ export function showChangelogIfNeeded() {
           el(
             'ul',
             { className: 'wn-grid' },
-            ...r.items.map((it) =>
-              el('li', { className: 'wn-card' }, icon(it.icon), el('div', {}, el('b', { textContent: it.title }), el('p', { textContent: it.text }))),
-            ),
+            ...r.items.map(card),
           ),
         ),
       ),
     ),
-    el('footer', { className: 'wn-foot' }, el('label', { className: 'cs-check' }, never, ' No volver a mostrar'), ok),
+    el(
+      'footer',
+      { className: 'wn-foot' },
+      welcome
+        ? el('span', { className: 'wn-hint', textContent: 'Te avisaremos aquí cuando haya novedades.' })
+        : el('label', { className: 'cs-check' }, never, ' No avisarme de novedades'),
+      ok,
+    ),
   )
   box.setAttribute('aria-modal', 'true')
   const overlay = el('div', { className: 'whatsnew-overlay' }, box)
